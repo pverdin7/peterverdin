@@ -100,7 +100,7 @@
 
   function card(p) {
     const stat = (p.id === 'webinar-delivery' ? 'Up to ' : '') + p.outcome + ' ' + workFrontLabel(p);
-    return `<article class="project-card work-project-card" id="preview-${esc(p.id)}"><div class="work-visual-wrap"><button type="button" class="visual-button work-visual-trigger" data-project="${esc(p.id)}" aria-label="Open ${esc(p.title)} ${esc(stat)}. Full study requires access.">${cardVisual(p)}</button><button type="button" class="work-preview-toggle" data-preview-toggle="${esc(p.id)}" aria-controls="work-peek-${esc(p.id)}" aria-expanded="false">Preview <span aria-hidden="true">↓</span></button></div><div class="project-body"><div class="project-meta"><span>PROJECT ${esc(p.number)}</span><span>${esc(p.eyebrow.split(' · ')[0])}</span></div><div class="chips" aria-label="Skills">${chips(p,4)}</div><h3><button type="button" data-project="${esc(p.id)}">${esc(p.title)}</button></h3><p>${esc(p.summary)}</p>${workRoleContext(p)}<div class="card-action"><button type="button" data-project="${esc(p.id)}">OPEN PROJECT <span aria-hidden="true">↗</span></button><span class="lock-label"><span class="lock-icon" aria-hidden="true"></span>Full study · access code</span></div></div></article>`;
+    return `<article class="project-card work-project-card" id="preview-${esc(p.id)}"><header class="work-card-heading"><span class="work-card-number">PROJECT ${esc(p.number)} / ${esc(p.category.toUpperCase())}</span><h3><button type="button" data-project="${esc(p.id)}">${esc(p.title)}</button></h3></header><div class="work-visual-wrap"><button type="button" class="visual-button work-visual-trigger" data-project="${esc(p.id)}" aria-label="Open ${esc(p.title)}. ${esc(stat)}.">${cardVisual(p)}</button><button type="button" class="work-preview-toggle" data-preview-toggle="${esc(p.id)}" aria-controls="work-peek-${esc(p.id)}" aria-expanded="false">Preview image <span aria-hidden="true">↓</span></button></div><div class="project-body"><p>${esc(p.summary)}</p><div class="chips" aria-label="Skills">${chips(p,4)}</div>${workRoleContext(p)}<div class="card-action"><button type="button" data-project="${esc(p.id)}">OPEN CASE STUDY <span aria-hidden="true">↗</span></button><span class="lock-label"><span class="lock-icon" aria-hidden="true"></span>${authenticated?'Access granted':'Access code if needed'}</span></div></div></article>`;
   }
 
   function renderProjects() {
@@ -121,12 +121,15 @@
     el.showModal();document.body.classList.add('modal-open');
   }
   function closeDialogs(){ $$('dialog[open]').forEach(d=>d.close());document.body.classList.remove('modal-open'); }
-  function projectDialog(id) {
+  async function projectDialog(id) {
     const p=projects.find(x=>x.id===id);if(!p)return;
     activeProject=id;
-    if(!authenticated){openAccess('login');return;}
-    $('#project-dialog-body').innerHTML=`${visual(p)}<p class="eyebrow red">Project ${esc(p.number)} / ${esc(p.eyebrow)}</p><h2 id="project-dialog-title">${esc(p.title)}</h2><div class="chips">${chips(p)}</div><p class="intro">${esc(p.summary)}</p><div class="modal-result"><strong>${esc(p.outcome)}</strong><span>${esc(p.outcomeLabel)}</span></div><div class="button-row">${authenticated?`<button class="btn" data-view-case="${esc(p.id)}">Read the full case study →</button>`:`<button class="btn" data-open-access="login">Enter access code →</button><button class="btn outline" data-open-access="request">Request access ↗</button>`}</div><p class="form-fine">This is a public project preview. Detailed materials and downloads remain private.</p>`;
-    openDialog('#project-dialog');
+    if(!authenticated){await openAccess('login');return;}
+    if(!$('#private-content')){navigate('/my-work/#case-'+encodeURIComponent(id));return;}
+    if(!privateCases.length)await loadPrivate();
+    const selected=document.getElementById('case-'+id);
+    if(selected)selected.scrollIntoView({behavior:scrollBehavior(),block:'start'});
+    else toast('This case study is not available yet. Please email goldinthecracksofficial@gmail.com for a copy.');
   }
   function setTab(name) {
     $$('[data-tab]').forEach(el=>{const on=el.dataset.tab===name;el.setAttribute('aria-selected',String(on));el.tabIndex=on?0:-1;});
@@ -193,7 +196,7 @@
     authenticated=true;closeDialogs();
     const destination=activeProject?'case-'+activeProject:'private-library';
     if(!$('#private-content')) { navigate('/my-work/#'+destination);return; }
-    await loadPrivate();document.getElementById(destination)?.scrollIntoView({behavior:scrollBehavior()});
+    await loadPrivate();document.getElementById(destination)?.scrollIntoView({behavior:scrollBehavior(),block:'start'});
   }
   async function loadSession() {
     try {const s=await api('session');authenticated=!!s.authorized;if(authenticated)await loadPrivate();} catch {authenticated=false;}
@@ -217,9 +220,9 @@
     if(asset?.available&&asset.kind==='VIDEO'&&!asset.externalUrl&&/\.mp4$/i.test(asset.key)){
       const url='/api/asset/'+encodeURIComponent(asset.key);
       media=`<video class="learning-path-video" controls playsinline preload="none" aria-label="${esc(step.title)}"${poster?` poster="${poster}"`:''} src="${url}?play=1">Your browser cannot play this video. Use the download link below.</video>`;
-      download=`<a class="learning-path-download" href="${url}" target="_blank" rel="noopener noreferrer">Download original <span aria-hidden="true">↗</span></a>`;
+      download=`<a class="learning-path-download" href="${url}" data-private-file="${esc(asset.key)}" data-asset-label="${esc(asset.label || step.title)}" target="_blank" rel="noopener noreferrer">Download original <span aria-hidden="true">↗</span></a>`;
     }else if(asset?.available){
-      media=`<div class="learning-path-empty"><p>Open this video to explore the next part of the learning experience.</p><a href="/api/asset/${encodeURIComponent(asset.key)}" target="_blank" rel="noopener noreferrer">Watch video <span aria-hidden="true">↗</span></a></div>`;
+      media=`<div class="learning-path-empty"><p>Open this video to explore the next part of the learning experience.</p><a href="/api/asset/${encodeURIComponent(asset.key)}" data-private-file="${esc(asset.key)}" data-asset-label="${esc(asset.label || step.title)}" target="_blank" rel="noopener noreferrer">Watch video <span aria-hidden="true">↗</span></a></div>`;
     }else{
       media=`<div class="learning-path-empty"><p>This example is available by request.</p><a href="${esc(learningSampleRequest(p,step))}">Request this sample <span aria-hidden="true">↗</span></a></div>`;
     }
@@ -246,15 +249,122 @@
     if(focusHeading)panel.querySelector('.learning-path-heading')?.focus({preventScroll:true});
   }
   /* END GUIDED LEARNING PATH */
+  function privatePreviewVisual(p) {
+    const item=workPreviewMap[p.id]||{};
+    const name=item.image || (imageNames.has(p.visual) ? p.visual : null);
+    if(name && (imageNames.has(name) || ['slow-coffee','tso','nnu'].includes(name))) {
+      const url=name==='book'?'/assets/img/book.svg':'/assets/img/'+name+'.webp';
+      return `<div class="case-preview-cover case-cover-${esc(name)}"><img src="${url}" alt="${esc(item.alt || p.title+' project preview')}" loading="lazy"><span class="case-preview-image-caption">${esc(item.caption || p.title)}</span></div>`;
+    }
+    return `<div class="case-preview-graphic"><span>PROJECT ${esc(p.number)} / ${esc(p.category.toUpperCase())}</span><strong>${esc(p.outcome)}</strong><p>${esc(p.outcomeLabel)}</p><span class="case-preview-graphic-line" aria-hidden="true"></span></div>`;
+  }
+  function privateAsset(a,p) {
+    if(!a.available) return `<div class="case-file case-file-missing"><span class="case-file-icon" aria-hidden="true">?</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>Available by request</small></span><a class="case-file-action" href="mailto:goldinthecracksofficial@gmail.com?subject=${encodeURIComponent('Work sample request: '+p.title+' — '+a.label)}">Request ↗</a></div>`;
+    return `<a class="case-file case-file-download" href="${a.externalUrl?esc(a.externalUrl):`/api/asset/${encodeURIComponent(a.key)}`}" ${a.externalUrl?'':`data-private-file="${esc(a.key)}"`} data-asset-label="${esc(a.label)}" data-case-title="${esc(p.title)}" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">${a.kind==='VIDEO'?'▶':a.kind==='PRESENTATION'?'▤':'↗'}</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>${esc(a.kind)} · ${a.externalUrl?'YouTube video':'Protected file'}</small></span><span class="case-file-action">Open ↗</span></a>`;
+  }
+  function renderPrivateCase(p) {
+    return `<article class="case-study" id="case-${esc(p.id)}"><div class="case-study-heading"><p class="eyebrow red">Project ${esc(p.number)} / ${esc(p.category)}</p><h3>${esc(p.title)}</h3><p class="case-summary">${esc(p.summary)}</p></div><div class="case-study-columns"><div class="case-narrative"><div class="chips">${chips(p)}</div><div class="case-parts"><div><h4>The challenge</h4><p>${esc(p.challenge)}</p></div><div><h4>The idea & what I did</h4><p>${esc(p.approach)}</p></div><div><h4>The outcome</h4><p>${esc(p.impact)}</p></div></div><div class="case-outcome"><strong>${esc(p.outcome)}</strong><span>${esc(p.outcomeLabel)}</span></div></div><aside class="case-preview" aria-label="Work sample previews for ${esc(p.title)}"><div class="case-preview-top"><span>INSIDE THE WORK</span><span>${p.assets.length} SAMPLE${p.assets.length===1?'':'S'}</span></div>${privatePreviewVisual(p)}<div class="case-preview-files">${p.assets.map(a=>privateAsset(a,p)).join('')}</div><p class="case-preview-help" role="status" aria-live="polite" hidden></p></aside></div>${renderLearningPath(p)}</article>`;
+  }
+  /* A visual table of contents for the authorized work: one tap to jump,
+     with a live reading indicator and keyboard-accessible project links. */
+  function renderCaseIndex(items) {
+    const count=items.length;
+    return `<nav class="case-index" aria-label="Explore the case studies"><div class="case-index-top"><div class="case-index-kicker"><span class="case-index-signal" aria-hidden="true"></span><span>THE WORK / INDEX</span></div><span class="case-index-total">${count} CASES <span class="case-index-swipe" aria-hidden="true">· SWIPE →</span></span></div><div class="case-index-reading"><span class="case-index-read-label">YOU’RE VIEWING</span><span class="case-index-read-number" id="case-index-number">01<span> / ${String(count).padStart(2,'0')}</span></span></div><div class="case-index-progress" role="progressbar" aria-label="Current case study" aria-valuemin="1" aria-valuemax="${count}" aria-valuenow="1"><span class="case-index-progress-fill" style="width:${count?100/count:0}%"></span></div><div class="case-index-list">${items.map((p,i)=>`<a href="#case-${esc(p.id)}" class="case-index-item${i===0?' is-current':''}" data-case-nav="${esc(p.id)}" ${i===0?'aria-current="location"':''}><span class="case-index-item-num">${esc(p.number)}</span><span class="case-index-item-copy"><span class="case-index-item-category">${esc(p.category)}</span><span class="case-index-item-title">${esc(p.title)}</span></span><span class="case-index-item-arrow" aria-hidden="true">↗</span></a>`).join('')}</div><div class="case-index-bottom"><span>SELECT A PROJECT</span><span aria-hidden="true">↕ SCROLL</span></div></nav>`;
+  }
+  let disposeCaseIndex=()=>{};
+  function enableCaseIndex() {
+    disposeCaseIndex();
+    const menu=$('#private-content .case-index');
+    const list=menu?.querySelector('.case-index-list');
+    const links=list?$$('[data-case-nav]',list):[];
+    const cases=$$('#private-content .case-study');
+    if(!menu||!cases.length)return;
+    let current='',frame=0;
+    function setCurrent(id) {
+      if(!id||id===current)return;
+      current=id;
+      const at=links.findIndex(a=>a.dataset.caseNav===id);
+      if(at<0)return;
+      links.forEach(a=>{
+        const on=a.dataset.caseNav===id;
+        a.classList.toggle('is-current',on);
+        if(on)a.setAttribute('aria-current','location');
+        else a.removeAttribute('aria-current');
+      });
+      const number=menu.querySelector('#case-index-number');
+      if(number)number.innerHTML=`${String(at+1).padStart(2,'0')}<span> / ${String(cases.length).padStart(2,'0')}</span>`;
+      const progress=menu.querySelector('.case-index-progress');
+      const fill=menu.querySelector('.case-index-progress-fill');
+      if(progress)progress.setAttribute('aria-valuenow',String(at+1));
+      if(fill)fill.style.width=`${(at+1)*100/cases.length}%`;
+      const active=links[at];
+      if(matchMedia('(max-width: 1160px)').matches){
+        const start=active.offsetLeft, end=start+active.offsetWidth;
+        if(start<list.scrollLeft+16||end>list.scrollLeft+list.clientWidth-16){list.scrollTo({left:Math.max(0,start-list.clientWidth/2+active.offsetWidth/2),behavior:'auto'});}
+      }else{
+        const start=active.offsetTop-list.offsetTop,end=start+active.offsetHeight;
+        if(start<list.scrollTop+12||end>list.scrollTop+list.clientHeight-12){list.scrollTo({top:Math.max(0,start-list.clientHeight/2+active.offsetHeight/2),behavior:'auto'});}
+      }
+    }
+    function update() {
+      frame=0;
+      const threshold=Math.min(310,Math.max(175,window.innerHeight*.34));
+      let visible=cases[0];
+      for(const item of cases){if(item.getBoundingClientRect().top<=threshold)visible=item;else break;}
+      setCurrent(visible.id.slice(5));
+    }
+    function schedule(){if(!frame)frame=requestAnimationFrame(update);}
+    function onClick(e){
+      const link=e.target.closest('[data-case-nav]');
+      if(link)setCurrent(link.dataset.caseNav);
+    }
+    list.addEventListener('click',onClick);
+    window.addEventListener('scroll',schedule,{passive:true});
+    window.addEventListener('resize',schedule,{passive:true});
+    schedule();
+    disposeCaseIndex=()=>{
+      if(frame)cancelAnimationFrame(frame);
+      list.removeEventListener('click',onClick);
+      window.removeEventListener('scroll',schedule);
+      window.removeEventListener('resize',schedule);
+    };
+  }
+  function showFileError(el,message) {
+    const panel=el.closest('.case-preview') || el.closest('.learning-path');
+    const status=panel?.querySelector('.case-preview-help') || panel?.querySelector('.learning-path-status');
+    if(status){status.hidden=false;status.textContent=message;}
+    else toast(message);
+  }
+  // Check private files before navigating. A missing R2 object should never dump JSON in a browser tab.
+  async function openPrivateFile(anchor) {
+    const destination=anchor.href,windowRef=window.open('about:blank','_blank');
+    if(windowRef){windowRef.document.title='Checking work sample';windowRef.document.body.textContent='Checking the private work sample…';}
+    try {
+      const response=await fetch(destination,{method:'HEAD',credentials:'same-origin',cache:'no-store'});
+      if(!response.ok){let msg='';try{msg=(await response.json()).error||'';}catch{};throw Error(msg||'This file has not yet been uploaded to the private library.');}
+      if(windowRef){windowRef.location.replace(destination);}
+      else {window.location.assign(destination);}
+    }catch(err) {
+      if(windowRef)windowRef.close();
+      const label=anchor.dataset.assetLabel||'This sample';
+      showFileError(anchor,`${label} isn’t in private storage yet. Please request a copy from goldinthecracksofficial@gmail.com.`);
+    }
+  }
   async function loadPrivate() {
     const target=$('#private-content');if(!target)return;
     try {
       const data=await api('projects');if(!Array.isArray(data.projects))throw new Error('The case studies could not be loaded. Please try again.');privateCases=data.projects;
       $('#access-gate').hidden=true;target.hidden=false;
-      target.innerHTML=`<div class="private-intro"><div><p class="eyebrow red">Access granted / the complete picture</p><h2>The full case studies.</h2></div><button class="btn outline small" data-logout>Sign out ↗</button></div><div class="private-layout"><nav class="case-index" aria-label="Case study index">${privateCases.map(p=>`<a href="#case-${esc(p.id)}">${esc(p.number)} &nbsp; ${esc(p.title)}</a>`).join('')}</nav><div>${privateCases.map(p=>`<article class="case-study" id="case-${esc(p.id)}"><p class="eyebrow red">Project ${esc(p.number)} / ${esc(p.category)}</p><h3>${esc(p.title)}</h3><div class="chips">${chips(p)}</div><p class="case-summary">${esc(p.summary)}</p><div class="modal-result"><strong>${esc(p.outcome)}</strong><span>${esc(p.outcomeLabel)}</span></div><div class="case-parts"><div><h4>The context</h4><p>${esc(p.challenge)}</p></div><div><h4>What I did</h4><p>${esc(p.approach)}</p></div><div><h4>The result</h4><p>${esc(p.impact)}</p></div></div>${renderLearningPath(p)}<h4 style="margin-bottom:16px">${p.learningPath?'Original files':'The work samples'}</h4><div class="asset-list">${p.assets.map(a=>`<div class="asset-row ${a.available?'':'unavailable'}"><span class="asset-type">${esc(a.kind)}</span>${a.available?`<a href="/api/asset/${encodeURIComponent(a.key)}" target="_blank" rel="noopener noreferrer">${esc(a.label)} ↗</a>`:`<span>${esc(a.label)}</span>`}${a.available?`<span class="asset-state">${a.externalUrl&&a.kind==='VIDEO'?'Watch on YouTube':'Private file'}</span>`:`<a class="asset-state" href="mailto:goldinthecracksofficial@gmail.com?subject=${encodeURIComponent('Work sample request: '+p.title+' — '+a.label)}">Request this sample ↗</a>`}</div>`).join('')}</div></article>`).join('')}</div></div>`;
+      target.innerHTML=`<div class="private-intro"><div><p class="eyebrow red">Access granted / the complete picture</p><h2>Explore the full work.</h2><p>Each case includes the thinking, the outcome, and a preview of its supporting work.</p></div><button class="btn outline small" data-logout>Sign out ↗</button></div><div class="private-layout">${renderCaseIndex(privateCases)}<div class="case-studies-list">${privateCases.map(renderPrivateCase).join('')}</div></div>`;
+      enableCaseIndex();
       const fragment=location.hash.slice(1);
-      if(fragment?.startsWith('case-'))setTimeout(()=>document.getElementById(fragment)?.scrollIntoView({behavior:scrollBehavior()}),0);
-    }catch(err){toast(err.message);}
+      if(fragment.startsWith('case-'))requestAnimationFrame(()=>document.getElementById(fragment)?.scrollIntoView({behavior:scrollBehavior()}));
+    }catch(err){
+      $('#access-gate').hidden=true;target.hidden=false;
+      disposeCaseIndex();
+      const unavailable=err.message.toLowerCase().includes('not been uploaded')||err.message.toLowerCase().includes('not ready');
+      target.innerHTML=`<div class="case-library-error" role="alert"><h2>Access confirmed. Case-study library unavailable.</h2><p>${unavailable?'The private case-study index has not been added to Cloudflare R2. Upload case-studies.json to the root of the private bucket.':'The private library could not load. Please try again or contact Peter for the sample.'}</p><a href="mailto:goldinthecracksofficial@gmail.com?subject=Portfolio%20case%20study%20request">Request a work sample ↗</a></div>`;
+    }
   }
   async function loadAdmin() {
     if(!$('#admin-content'))return;
@@ -268,7 +378,7 @@
   function navigate(path){window.location.assign(path);}
   function projectIdFromHash(hash=location.hash) {
     let id;try{id=decodeURIComponent(hash.slice(1));}catch{return '';}
-    return projects.some(project=>project.id===id)?id:'';
+    const projectId=id.startsWith('case-')?id.slice(5):id;return projects.some(project=>project.id===projectId)?projectId:'';
   }
   async function openProjectFromHash() {
     const navigation=++projectNavigation,id=projectIdFromHash();
@@ -306,12 +416,13 @@
       const card=target.closest('.work-project-card');const open=card.classList.toggle('is-preview');
       target.setAttribute('aria-expanded',String(open));target.innerHTML=open?'Hide preview <span aria-hidden="true">↑</span>':'Preview <span aria-hidden="true">↓</span>';return;
     }
+    if(target.hasAttribute('data-private-file')){e.preventDefault();openPrivateFile(target);return;}
     if(target.dataset.project){projectDialog(target.dataset.project);return;}
     if(target.dataset.openAccess){e.preventDefault();if(!target.closest('#project-dialog'))activeProject='';openAccess(target.dataset.openAccess);return;}
     if(target.dataset.tab){setTab(target.dataset.tab);return;}
     if(target.id==='show-email-login'){$('#email-login-form').hidden=!$('#email-login-form').hidden;renderTurnstile();return;}
-    if(target.dataset.viewCase){closeDialogs();if(!$('#private-content')){navigate('/my-work/#case-'+target.dataset.viewCase);return;}$('#case-'+target.dataset.viewCase)?.scrollIntoView({behavior:scrollBehavior()});return;}
-    if(target.hasAttribute('data-logout')){try{await api('logout',{});authenticated=false;privateCases=[];$('#access-gate').hidden=false;$('#private-content').hidden=true;$('#private-content').innerHTML='';toast('You’re signed out.');}catch(err){toast(err.message);}return;}
+    if(target.dataset.viewCase){closeDialogs();projectDialog(target.dataset.viewCase);return;}
+    if(target.hasAttribute('data-logout')){try{await api('logout',{});disposeCaseIndex();authenticated=false;privateCases=[];$('#access-gate').hidden=false;$('#private-content').hidden=true;$('#private-content').innerHTML='';toast('You’re signed out.');}catch(err){toast(err.message);}return;}
     if(target.id==='admin-logout'){target.disabled=true;try{await api('admin/logout',{});adminAuthenticated=false;$('#admin-auth').hidden=false;$('#admin-content').hidden=true;$('#admin-requests').innerHTML='';}catch(err){toast(err.message);}finally{target.disabled=false;}return;}
     if(target.dataset.adminAction){
       const action=target.dataset.adminAction;

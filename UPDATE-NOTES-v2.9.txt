@@ -1,0 +1,34 @@
+Peter Verdin Portfolio — Case Study Navigation v2.9
+
+This update changes ONLY the authorized case-study navigation interface. It does not change authentication, secrets, backend APIs, private assets, or R2 manifests.
+
+WHAT CHANGED
+- A dark, graphic left-side project index with all 15 numbered case studies.
+- Bigger titles and tiny category descriptors, rather than plain small links.
+- Red active-project highlight, current-case count, and reading-progress line.
+- Index remains visible while reading; it tracks scrolling and keeps the active item in view.
+- On smaller screens it becomes a horizontally scrollable, sticky project strip.
+- Keyboard navigation and accessible current-location indicator are supported.
+
+CHANGED-FILES ZIP
+Upload contents to the same paths in the GitHub repository, replacing matching files:
+  public/assets/site.js
+  public/assets/site.css
+  public/index.html
+  public/my-work/index.html
+  public/resume/index.html
+  public/contact/index.html
+  public/teaching-philosophy/index.html
+  public/privacy/index.html
+  public/access/index.html
+  public/admin/index.html
+  public/404.html
+
+Only the source script, CSS, and stylesheet/script cache version in the HTML pages were changed; other case study content is unchanged.
+
+FULL-BUILD ZIP
+The complete website source, now with the new navigation. Upload extracted contents to your existing GitHub repository. Keep your EXISTING root wrangler.toml and all Cloudflare runtime secrets unchanged. The full package includes example Wrangler configuration but not your real runtime settings.
+
+After GitHub commit and successful Cloudflare deploy, reload the site, sign in with your existing authorized code, and open Work & Experience -> private cases. Verify desktop vertical navigation, mobile horizontal navigation, and active highlighting while scrolling.
+
+No re-upload to R2 is required for this navigation-only change.

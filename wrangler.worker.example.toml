@@ -1,0 +1,28 @@
+# Use ONLY for Workers -> existing workers.dev deployment. Rename to wrangler.worker.toml
+# Fill in the real nonsecret values, D1 ID and R2 name before deployment.
+name = "peterverdin"
+main = "worker/index.js"
+compatibility_date = "2026-10-29"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = ["/api/*"]
+html_handling = "auto-trailing-slash"
+not_found_handling = "404-page"
+
+[vars]
+SITE_ORIGIN = "https://peterverdin.goldinthecracksofficial.workers.dev"
+ADMIN_EMAIL = "goldinthecracksofficial@gmail.com"
+REPLY_TO = "goldinthecracksofficial@gmail.com"
+EMAIL_FROM = "Peter Verdin <access@YOUR-VERIFIED-DOMAIN>"
+TURNSTILE_SITE_KEY = "REPLACE_WITH_REAL_SITE_KEY"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "peter-verdin-access"
+database_id = "REPLACE_WITH_REAL_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "PRIVATE_ASSETS"
+bucket_name = "peter-verdin-private"

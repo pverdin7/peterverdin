@@ -68,3 +68,19 @@ Configure every required setting before testing access. The shared code alone do
 Test code entry, a real access request, owner approval, email delivery, sign-in, revocation, all 22 downloads, and the authorized hosted-video link on the actual `pages.dev` hostname. Play and seek through the guided **HBU orientation → Athletic Stance lesson → March 2019 webinar** sequence. Set `SITE_ORIGIN` and Turnstile for that hostname first. Hosted-video details stay in `private/hosted-videos.json`; the portfolio gate does not change YouTube’s own sharing settings.
 
 Only after that review, follow the final domain-cutover section in [DEPLOYMENT.md](DEPLOYMENT.md). The guide also includes a Wrangler deployment alternative if you prefer to deploy this local folder without GitHub.
+
+
+## v2.7 navigation + private assets
+
+The work gallery now opens complete case studies directly after authorization and displays sample previews beside each private case. `case-studies.json` is **not** in GitHub for privacy; upload it separately to R2 bucket `peter-verdin-private` at the root object key `case-studies.json`. Each asset's exact key is `files/<asset-key>`. If an asset is missing, the website checks before opening it and shows a request message instead of raw JSON. See the separate R2 upload guide.
+
+## Update v2.8 — easier navigation and role tracking (October 29, 2026)
+
+- All 15 projects show their title **above** the visual. The title, visual and **Open case study** button all lead directly to the case after access is granted (or open the code-first access dialog before login).
+- Full case-study cards display the narrative on the left and previews/files on the right on desktop (stacked on phones). Missing files get an on-page request message instead of a raw 404 JSON tab.
+- The résumé keeps an expandable set of complete bullets per job. Its sticky role navigation lists **all 11 roles** and automatically highlights the role being read as you scroll; on narrow screens, it scrolls the role strip horizontally without moving the page.
+- Increased small typographic labels on the site. The print/download résumé link uses `public/assets/dr-peter-verdin-resume.pdf`.
+
+**Important R2 step:** The private case narratives are stored separately, not in this GitHub upload. Upload the accompanying `case-studies.json` at the ROOT of R2 bucket `peter-verdin-private`, with exact object name `case-studies.json`; work sample files are under the `files/` prefix. The separate R2 upload instructions describe the structure. Never place the private case-study index or original files in `public/` or GitHub.
+
+**Existing Cloudflare configuration:** Keep your current root `wrangler.toml` in GitHub. The GitHub ZIP contains `wrangler.worker.example.toml` as an example, not a replacement for your configured file. Keep existing runtime secrets (`PORTFOLIO_PASSWORD`, `TURNSTILE_SECRET_KEY`, `RATE_LIMIT_SALT`) in Cloudflare, not in GitHub. This source update does not change their values or any D1/R2 bindings.
