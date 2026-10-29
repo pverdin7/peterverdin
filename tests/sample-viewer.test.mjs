@@ -3,9 +3,17 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const source=readFileSync(new URL('../public/assets/sample.js',import.meta.url),'utf8');
+const markup=readFileSync(new URL('../public/sample/index.html',import.meta.url),'utf8');
+const realIds=new Set([...markup.matchAll(/\bid=\"([^\"]+)\"/g)].map(match=>match[1]));
+
+test('viewer markup defines every ID used by JavaScript',()=>{
+ for(const [,id] of source.matchAll(/\$\('([^']+)'\)/g)){
+  assert.ok(realIds.has(id),`Viewer markup is missing #${id}`);
+ }
+});
 function fakeNode(){return {hidden:false,textContent:'',href:'',className:'',value:'',max:'',disabled:false,src:'',alt:'',replaceChildren(...children){this.children=children;},classList:{add(){}},addEventListener(){},setAttribute(){},load(){}};}
 async function render(status,key='sample.pdf',pages=2){
- const elements=new Map();const el=id=>{if(!elements.has(id))elements.set(id,fakeNode());return elements.get(id);};
+ const elements=new Map();const el=id=>{if(!realIds.has(id))return null;if(!elements.has(id))elements.set(id,fakeNode());return elements.get(id);};
  const document={title:'Original',getElementById:el,createElement:tag=>({...fakeNode(),tagName:tag}),addEventListener(){}};
  const location={search:'?file='+encodeURIComponent(key)+'&label=Original',replaced:null,replace(url){this.replaced=url;}};
  const calls=[];

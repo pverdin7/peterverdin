@@ -191,7 +191,7 @@ export async function onRequest(context){
   try {
     if(path==='config'&&req.method==='GET'){
       const status=accessStatus(env);
-      return json({ready:status.passwordReady,passwordReady:status.passwordReady,requestsReady:status.requestsReady,ownerReady:status.ownerReady,passwordEnabled:status.passwordEnabled,viewerVersion:'3.5',turnstileSiteKey:env.TURNSTILE_SITE_KEY||null,missing:status.missing});
+      return json({ready:status.passwordReady,passwordReady:status.passwordReady,requestsReady:status.requestsReady,ownerReady:status.ownerReady,passwordEnabled:status.passwordEnabled,viewerVersion:'3.6',turnstileSiteKey:env.TURNSTILE_SITE_KEY||null,missing:status.missing});
     }
     const requirement=path==='password-login'?'password':path==='admin/login'?'owner':(path==='request-access'||path==='login')?'requests':'storage';
     ensureReady(env,requirement);

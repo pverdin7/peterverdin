@@ -25,7 +25,8 @@
   function viewReady(){
     $('sample-status').hidden=true;
     $('sample-view').hidden=false;
-    $('sample-stage').classList.add('is-viewing');
+    // Keep the stage optional so a layout change never prevents media from opening.
+    $('sample-stage')?.classList.add('is-viewing');
   }
   async function fetchError(response){
     try { const data=await response.json(); return String(data.error||'').slice(0,180); }

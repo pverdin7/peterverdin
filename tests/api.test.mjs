@@ -66,7 +66,7 @@ test('inline playback is limited to declared MP4 videos and cannot inline docume
 
 test('unconfigured deployment fails closed',async()=>{
  const res=await onRequest({request:new Request('https://example.com/api/projects'),env:{}});assert.equal(res.status,503);assert.ok(!(await res.text()).includes('PRIVATE SENTINEL'));
- const cfg=await onRequest({request:new Request('https://example.com/api/config'),env:{}});const info=await cfg.json();assert.equal(info.ready,false);assert.equal(info.viewerVersion,'3.5');
+ const cfg=await onRequest({request:new Request('https://example.com/api/config'),env:{}});const info=await cfg.json();assert.equal(info.ready,false);assert.equal(info.viewerVersion,'3.6');
 });
 test('unauthorized visitors cannot read case studies or original files',async()=>{const f=fixture();try{
  assert.equal((await f.call('projects')).status,401);assert.equal((await f.call('asset/sample.pdf')).status,401);assert.equal((await f.call('asset/sample.pdf',undefined,{method:'HEAD'})).status,401);
@@ -323,5 +323,5 @@ test('PowerPoint viewer release includes Worker route and page-image viewer',()=
  assert.match(source,/status:302/);
  assert.match(source,/previewInfo\(env,key\)/);
  assert.match(worker,/onRequest/);
- assert.match(viewerHTML,/sample\.js\?v=20261029-sample35/);
+ assert.match(viewerHTML,/sample\.js\?v=20261029-sample36/);
 });
