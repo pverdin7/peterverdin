@@ -1,3 +1,5 @@
+# IMPORTANT: v3.1 uses protected, view-only previews. See VIEW-ONLY-SETUP-v3.1.md before deploying. Older references to downloadable work samples describe earlier releases. The public résumé remains a separate downloadable asset.
+
 # Peter Verdin — GitHub-ready portfolio (October 29, 2026)
 
 ## What changed in this release

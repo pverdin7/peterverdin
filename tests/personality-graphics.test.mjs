@@ -1,21 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-
 for (const route of ['my-work', 'resume']) {
-  test(`${route}: résumé cards have varied shapes, never repeating the giant arch`, () => {
+  test(`${route}: one organic gesture per career role, never a pattern in every tile`, () => {
     const html = readFileSync(new URL(`../public/${route}/index.html`, import.meta.url), 'utf8');
-    const shapes = [...html.matchAll(/<svg class="career-tile-mark" data-watermark="personal"[^>]*>(.*?)<\/svg>/g)].map(x=>x[1]);
-    assert.equal(shapes.length, 35, 'all 35 original role marks should be replaced');
-    assert.ok(new Set(shapes).size >= 10, 'expect a diverse set of scribbles, bursts and blobs');
-    assert.ok(!shapes.some(s => s.includes('M8 72V30C8 15')), 'previous repeated arch is gone');
-    assert.ok(html.includes('/assets/site.css?v=20261029-personality32'));
+    const marks = [...html.matchAll(/<svg class="career-tile-mark" data-watermark="editorial" data-mark="(squiggle|blob)"[^>]*>.*?<\/svg>/g)];
+    assert.equal(marks.length, 11, 'one graphic per role');
+    assert.ok(marks.some(m => m[1] === 'squiggle'));
+    assert.ok(marks.some(m => m[1] === 'blob'));
+    assert.ok(!html.includes('data-watermark="personal"'));
+    assert.ok(!html.includes('M31 3V61M4 32H60'), 'old radial burst gone');
+    assert.ok(html.includes('/assets/site.css?v=20261029-editorial33'));
   });
 }
-
-test('project gallery uses personality graphics rather than the repeated portal arch', () => {
+test('gallery uses only a single squiggle or a single blob', () => {
   const js = readFileSync(new URL('../public/assets/site.js', import.meta.url), 'utf8');
-  assert.ok(js.includes('data-watermark="personal"'));
-  assert.ok(!js.includes('M266 342V154C266 86')); // The old arch motif.
-  assert.ok(js.includes('wm-blob'));
+  assert.ok(js.includes('data-watermark="editorial"'));
+  assert.ok(js.includes('work-gesture'));
+  assert.ok(js.includes('work-blob'));
+  assert.ok(!js.includes('wm-fan'));
+  assert.ok(!js.includes('wm-portal'));
+});
+test('story-stage decorative elements use restrained single shapes', () => {
+  const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+  assert.equal((html.match(/class="story-stage-sculpture" data-watermark="editorial"/g)||[]).length,3);
+  assert.ok(!html.includes('class="story-hero-geometry"'));
 });

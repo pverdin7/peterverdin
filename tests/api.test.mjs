@@ -40,15 +40,15 @@ test('inline video playback stays authorized and supports seeking without changi
  for(const method of ['GET','HEAD'])assert.equal((await f.call('asset/lesson.mp4?play=1',undefined,{method})).status,401);
  const login=await f.call('password-login',{password:f.env.PORTFOLIO_PASSWORD,turnstileToken:'valid-password'}),visitor=cookieHeader(login);
  let r=await f.call('asset/lesson.mp4',undefined,{cookie:visitor});
- assert.equal(r.status,200);assert.equal(r.headers.get('Content-Disposition'),'attachment; filename="lesson.mp4"');
+ assert.equal(r.status,403);assert.equal(r.headers.get('Content-Disposition'),null);
  r=await f.call('asset/lesson.mp4?play=1',undefined,{cookie:visitor});
- assert.equal(r.status,200);assert.equal(r.headers.get('Content-Disposition'),'inline; filename="lesson.mp4"');
+ assert.equal(r.status,200);assert.equal(r.headers.get('Content-Disposition'),'inline');
  assert.equal(r.headers.get('Content-Type'),'video/mp4');assert.equal(r.headers.get('Cache-Control'),'private, no-store');assert.equal(r.headers.get('Accept-Ranges'),'bytes');assert.equal(r.headers.get('X-Content-Type-Options'),'nosniff');assert.equal(await r.text(),'0123456789');
  r=await f.call('asset/lesson.mp4?play=1',undefined,{cookie:visitor,method:'HEAD'});
  assert.equal(r.status,200);assert.equal(r.headers.get('Content-Length'),'10');assert.equal(await r.text(),'');
  for(const [range,body,contentRange] of [['bytes=0-3','0123','bytes 0-3/10'],['bytes=4-','456789','bytes 4-9/10'],['bytes=-4','6789','bytes 6-9/10']]){
   r=await f.call('asset/lesson.mp4?play=1',undefined,{cookie:visitor,headers:{Range:range}});
-  assert.equal(r.status,206);assert.equal(await r.text(),body);assert.equal(r.headers.get('Content-Range'),contentRange);assert.equal(r.headers.get('Content-Length'),String(body.length));assert.equal(r.headers.get('Content-Disposition'),'inline; filename="lesson.mp4"');
+  assert.equal(r.status,206);assert.equal(await r.text(),body);assert.equal(r.headers.get('Content-Range'),contentRange);assert.equal(r.headers.get('Content-Length'),String(body.length));assert.equal(r.headers.get('Content-Disposition'),'inline');
  }
  assert.equal((await f.call('asset/lesson.mp4?play=1',undefined,{cookie:visitor,headers:{Range:'bytes=30-40'}})).status,416);
  await f.call('logout',{}, {cookie:visitor});assert.equal((await f.call('asset/lesson.mp4?play=1',undefined,{cookie:visitor})).status,401);
@@ -59,14 +59,14 @@ test('inline playback is limited to declared MP4 videos and cannot inline docume
  f.objects.set('files/undeclared.mp4','0123456789');f.objects.set('files/unavailable.mp4','0123456789');
  const login=await f.call('password-login',{password:f.env.PORTFOLIO_PASSWORD,turnstileToken:'valid-password'}),visitor=cookieHeader(login);
  for(const key of ['sample.pdf','undeclared.mp4']){
-  const r=await f.call('asset/'+key+'?play=1',undefined,{cookie:visitor});assert.equal(r.status,200);assert.equal(r.headers.get('Content-Disposition'),`attachment; filename="${key}"`);
+  const r=await f.call('asset/'+key+'?play=1',undefined,{cookie:visitor});assert.equal(r.status,key==='sample.pdf'?302:403);assert.equal(r.headers.get('Content-Disposition'),null);
  }
  assert.equal((await f.call('asset/unavailable.mp4?play=1',undefined,{cookie:visitor})).status,404);
 }finally{f.close();}});
 
 test('unconfigured deployment fails closed',async()=>{
  const res=await onRequest({request:new Request('https://example.com/api/projects'),env:{}});assert.equal(res.status,503);assert.ok(!(await res.text()).includes('PRIVATE SENTINEL'));
- const cfg=await onRequest({request:new Request('https://example.com/api/config'),env:{}});assert.equal((await cfg.json()).ready,false);
+ const cfg=await onRequest({request:new Request('https://example.com/api/config'),env:{}});const info=await cfg.json();assert.equal(info.ready,false);assert.equal(info.viewerVersion,'3.4');
 });
 test('unauthorized visitors cannot read case studies or original files',async()=>{const f=fixture();try{
  assert.equal((await f.call('projects')).status,401);assert.equal((await f.call('asset/sample.pdf')).status,401);assert.equal((await f.call('asset/sample.pdf',undefined,{method:'HEAD'})).status,401);
@@ -90,8 +90,8 @@ test('request → owner approval → email link → one-time sign-in → revoke'
  r=await f.call('redeem',{token});assert.equal(r.status,200);const visitor=cookieHeader(r);assert.ok(visitor.startsWith('__Host-pv_session='));
  assert.equal((await f.call('redeem',{token})).status,401);
  r=await f.call('projects',undefined,{cookie:visitor});assert.equal(r.status,200);assert.ok((await r.text()).includes('PRIVATE SENTINEL'));assert.equal(r.headers.get('cache-control'),'private, no-store');
- r=await f.call('asset/sample.pdf',undefined,{cookie:visitor});assert.equal(r.status,200);assert.equal(await r.text(),'%PDF-TEST');assert.equal(r.headers.get('Content-Disposition'),'attachment; filename="sample.pdf"');
- r=await f.call('asset/sample.pdf',undefined,{cookie:visitor,headers:{Range:'bytes=0-3'}});assert.equal(r.status,206);assert.equal(await r.text(),'%PDF');
+ r=await f.call('asset/sample.pdf',undefined,{cookie:visitor});assert.equal(r.status,302);assert.match(r.headers.get('Location'),/^\/sample\/\?file=sample\.pdf/);assert.ok(!(await r.text()).includes('%PDF-TEST'));
+ r=await f.call('asset/sample.pdf',undefined,{cookie:visitor,headers:{Range:'bytes=0-3'}});assert.equal(r.status,403);
  assert.equal((await f.call('asset/missing.pdf',undefined,{cookie:visitor})).status,404);
  r=await f.call('login',{email:person.email,turnstileToken:'valid-email'});assert.equal(r.status,200);const unusedToken=f.sent.at(-1).html.match(/#token=([a-f0-9]{64})/)[1];
  r=await f.call('admin/action',{id:person.id,action:'revoke'},{cookie:admin});assert.equal(r.status,200);assert.equal((await f.call('projects',undefined,{cookie:visitor})).status,401);assert.equal((await f.call('asset/sample.pdf',undefined,{cookie:visitor})).status,401);assert.equal((await f.call('redeem',{token:unusedToken})).status,401);
@@ -156,15 +156,25 @@ test('failed delivery is reported truthfully and leaves no usable approval token
  assert.equal(f.db.db.prepare('SELECT COUNT(*) AS count FROM login_tokens').get().count,0);
 }finally{f.close();}});
 
-test('private downloads retain safe headers despite stored metadata and reject unavailable files',async()=>{const f=fixture();try{
+test('original files redirect to view-only viewer for GET and deny HEAD/Range; preview pages are session gated',async()=>{const f=fixture();try{
  const login=await f.call('password-login',{password:f.env.PORTFOLIO_PASSWORD,turnstileToken:'valid-password'});const visitor=cookieHeader(login);
- f.metadata.set('files/sample.pdf',{'Content-Disposition':'inline','Cache-Control':'public, max-age=31536000','Content-Type':'text/html'});
- let r=await f.call('asset/sample.pdf',undefined,{cookie:visitor});assert.equal(r.status,200);assert.equal(r.headers.get('Content-Disposition'),'attachment; filename="sample.pdf"');assert.equal(r.headers.get('Content-Type'),'application/pdf');assert.equal(r.headers.get('Cache-Control'),'private, no-store');assert.equal(r.headers.get('X-Content-Type-Options'),'nosniff');
- r=await f.call('asset/sample.pdf',undefined,{cookie:visitor,method:'HEAD'});assert.equal(r.status,200);assert.equal(r.headers.get('Content-Length'),'9');assert.equal(await r.text(),'');
- assert.equal((await f.call('asset/sample.pdf',undefined,{cookie:visitor,headers:{Range:'bytes=20-30'}})).status,416);
+ f.objects.set('previews/sample.pdf.json',JSON.stringify({key:'sample.pdf',pages:2,format:'webp'}));
+ f.objects.set('previews/sample.pdf--0001.webp','WATERMARKED-PAGE-1');
+ f.objects.set('previews/sample.pdf--0002.webp','WATERMARKED-PAGE-2');
+ for(const url of ['asset/sample.pdf','asset/sample.pdf?view=1','asset/sample.pdf?download=1']){
+  const r=await f.call(url,undefined,{cookie:visitor});assert.equal(r.status,302);assert.equal(r.headers.get('Content-Disposition'),null);assert.match(r.headers.get('Location'),/^\/sample\/\?file=sample\.pdf/);
+ }
+ assert.equal((await f.call('asset/sample.pdf',undefined,{cookie:visitor,method:'HEAD'})).status,403);
+ assert.equal((await f.call('asset/sample.pdf',undefined,{cookie:visitor,headers:{Range:'bytes=0-3'}})).status,403);
+ assert.equal((await f.call('preview/sample.pdf/manifest')).status,401);
+ assert.equal((await f.call('preview/sample.pdf/1')).status,401);
+ let r=await f.call('preview/sample.pdf/manifest',undefined,{cookie:visitor});assert.equal(r.status,200);assert.deepEqual(await r.json(),{pages:2,format:'webp'});
+ r=await f.call('preview/sample.pdf/1',undefined,{cookie:visitor});assert.equal(r.status,200);assert.equal(r.headers.get('Content-Type'),'image/webp');assert.equal(r.headers.get('Content-Disposition'),'inline');assert.equal(r.headers.get('Cache-Control'),'private, no-store');assert.equal(await r.text(),'WATERMARKED-PAGE-1');
+ assert.equal((await f.call('preview/sample.pdf/3',undefined,{cookie:visitor})).status,404);
+ assert.equal((await f.call('preview/sample.pdf/../1',undefined,{cookie:visitor})).status,404);
  assert.equal((await f.call('asset/%E0%A4%A',undefined,{cookie:visitor})).status,400);
  assert.equal((await f.call('asset/private%2Fsample.pdf',undefined,{cookie:visitor})).status,400);
- f.objects.set('case-studies.json',JSON.stringify([{id:'test',assets:[{key:'sample.pdf',available:false}]}]));assert.equal((await f.call('asset/sample.pdf',undefined,{cookie:visitor})).status,404);
+ f.objects.set('case-studies.json',JSON.stringify([{id:'test',assets:[{key:'sample.pdf',available:false}]}]));assert.equal((await f.call('preview/sample.pdf/1',undefined,{cookie:visitor})).status,404);
  f.objects.delete('case-studies.json');assert.equal((await f.call('projects',undefined,{cookie:visitor})).status,503);
 }finally{f.close();}});
 
@@ -263,19 +273,16 @@ test('public resume link points at the bundled, original PDF',()=>{
 });
 
 
-test('authorized PDF and image previews are inline only on explicit view=1, with ordinary downloads unchanged',async()=>{const f=fixture();try{
+test('PDFs and PPTX files redirect to view-only, images and other media cannot be downloaded via original route',async()=>{const f=fixture();try{
  f.objects.set('case-studies.json',JSON.stringify([{id:'test',assets:[{key:'sample.pdf',kind:'PDF',available:true},{key:'sample.png',kind:'IMAGE',available:true},{key:'lesson.mp4',kind:'VIDEO',available:true},{key:'slide.pptx',kind:'PRESENTATION',available:true}]}]));
  for(const key of ['sample.png','lesson.mp4','slide.pptx'])f.objects.set('files/'+key,'12345');
  const login=await f.call('password-login',{password:f.env.PORTFOLIO_PASSWORD,turnstileToken:'valid-password'}),visitor=cookieHeader(login);
- for(const key of ['sample.pdf','sample.png']){
-  let r=await f.call('asset/'+key,undefined,{cookie:visitor});assert.match(r.headers.get('Content-Disposition'),/^attachment;/);
-  r=await f.call('asset/'+key+'?view=1',undefined,{cookie:visitor});assert.match(r.headers.get('Content-Disposition'),/^inline;/);
-  assert.equal(r.headers.get('Cache-Control'),'private, no-store');
-  r=await f.call('asset/'+key+'?view=1',undefined,{cookie:visitor,method:'HEAD'});assert.match(r.headers.get('Content-Disposition'),/^inline;/);
+ for(const key of ['sample.pdf','sample.png','slide.pptx','lesson.mp4']){
+  for(const qs of ['', '?view=1','?download=1']){
+   const r=await f.call('asset/'+key+qs,undefined,{cookie:visitor});if(key.endsWith('.pdf')||key.endsWith('.pptx')){assert.equal(r.status,302);assert.match(r.headers.get('Location'),/^\/sample\/\?file=/);}else assert.equal(r.status,403);
+  }
  }
- for(const key of ['lesson.mp4','slide.pptx']){
-  const r=await f.call('asset/'+key+'?view=1',undefined,{cookie:visitor});assert.match(r.headers.get('Content-Disposition'),/^attachment;/);
- }
+ let r=await f.call('asset/lesson.mp4?play=1',undefined,{cookie:visitor});assert.equal(r.status,200);assert.equal(r.headers.get('Content-Disposition'),'inline');
  assert.equal((await f.call('asset/sample.pdf?view=1')).status,401);
 }finally{f.close();}});
 
@@ -283,8 +290,26 @@ test('public case-study sample links use the permanent sample viewer, not transi
  const file=fs.readFileSync(new URL('../public/assets/site.js',import.meta.url),'utf8');
  const viewer=fs.readFileSync(new URL('../public/assets/sample.js',import.meta.url),'utf8');
  assert.match(file,/\/sample\/\?file=/);
+ assert.match(file,/isSlides\?'View slides':'View'/);
+ assert.match(file,/\/\\.pptx\$\/i/);
+ assert.doesNotMatch(file,/case-file-download/);
  assert.doesNotMatch(file,/window\.open\('about:blank'/);
  assert.doesNotMatch(file,/windowRef\.close\(/);
  assert.match(viewer,/status===404/);
- assert.match(viewer,/location\.replace\(url/);
+ assert.match(viewer,/api\/preview/);
+ assert.doesNotMatch(viewer,/sample-download|location\.replace\(url/);
+ assert.doesNotMatch(file,/Download original|PowerPoint download/);
+});
+
+// Keep this check to prevent a future changed-files ZIP from silently omitting
+// the backend and viewer while only updating the site's presentation layer.
+test('PowerPoint viewer release includes Worker route and page-image viewer',()=>{
+ const source=fs.readFileSync(new URL('../functions/api/[[path]].js',import.meta.url),'utf8');
+ const worker=fs.readFileSync(new URL('../worker/index.js',import.meta.url),'utf8');
+ const viewerHTML=fs.readFileSync(new URL('../public/sample/index.html',import.meta.url),'utf8');
+ assert.match(source,/if\(\/\\\.\(pdf\|pptx\)\$\//);
+ assert.match(source,/status:302/);
+ assert.match(source,/previewInfo\(env,key\)/);
+ assert.match(worker,/onRequest/);
+ assert.match(viewerHTML,/sample\.js\?v=20261029-sample34/);
 });

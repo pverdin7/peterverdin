@@ -108,31 +108,64 @@ function hostedVideoURL(value){
   // The equality check also rejects whitespace that URL parsing would discard.
   return typeof value==='string'&&/^https:\/\/www\.youtube\.com\/watch\?v=[A-Za-z0-9_-]{11}$/.test(value)&&new URL(value).href===value;
 }
-async function serveAsset(req,env,key){
-  if(!/^[a-z0-9][a-z0-9._-]{0,150}$/.test(key)||key.includes('..'))throw new HttpError(400,'Invalid file.');
-  const all=await getCases(env),asset=all.flatMap(p=>p.assets||[]).find(a=>a.key===key&&a.available===true);
+// Protected original work files stay in R2. Only playable media (with inline playback)
+// and pre-rendered document page images are sent to the visitor.
+function validAssetKey(key){return /^[a-z0-9][a-z0-9._-]{0,150}$/.test(key)&&!key.includes('..');}
+async function findDeclaredAsset(env,key){
+  if(!validAssetKey(key))throw new HttpError(400,'Invalid file.');
+  const all=await getCases(env);
+  const asset=all.flatMap(p=>p.assets||[]).find(a=>a.key===key&&a.available===true);
   if(!asset)throw new HttpError(404,'This work sample is not available yet.');
+  return asset;
+}
+async function previewInfo(env,key){
+  const a=await findDeclaredAsset(env,key);
+  if(!/\.(pdf|pptx)$/.test(key)||Object.hasOwn(a,'externalUrl'))throw new HttpError(404,'This sample has no document preview.');
+  const manifest=await env.PRIVATE_ASSETS.get('previews/'+key+'.json');
+  if(!manifest)throw new HttpError(404,'The view-only preview has not been uploaded yet.');
+  const data=await manifest.json();
+  if(data?.key!==key||!Number.isInteger(data.pages)||data.pages<1||data.pages>500||data.format!=='webp')throw new HttpError(503,'The document preview is not configured correctly.');
+  return data;
+}
+async function servePreview(req,env,key,what){
+  const manifest=await previewInfo(env,key);
+  if(what==='manifest'){
+    if(req.method==='HEAD')return new Response(null,{headers:{'Cache-Control':'private, no-store'}});
+    return json({pages:manifest.pages,format:'webp'});
+  }
+  if(!/^\d{1,4}$/.test(what))throw new HttpError(404,'Preview page not found.');
+  const n=Number(what);
+  if(n<1||n>manifest.pages)throw new HttpError(404,'Preview page not found.');
+  const object=await env.PRIVATE_ASSETS.get('previews/'+key+'--'+String(n).padStart(4,'0')+'.webp');
+  if(!object)throw new HttpError(404,'Preview page not found.');
+  return new Response(req.method==='HEAD'?null:object.body,{headers:{
+    'Content-Type':'image/webp','Content-Disposition':'inline','Cache-Control':'private, no-store',
+    'X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow','Referrer-Policy':'no-referrer'
+  }});
+}
+async function serveAsset(req,env,key){
+  const asset=await findDeclaredAsset(env,key);
   if(Object.hasOwn(asset,'externalUrl')){
-    if(asset.kind!=='VIDEO'||!hostedVideoURL(asset.externalUrl))throw new HttpError(503,'This hosted work sample is not configured correctly. Please contact Peter.');
+    if(asset.kind!=='VIDEO'||!hostedVideoURL(asset.externalUrl))throw new HttpError(503,'This hosted work sample is not configured correctly.');
     return new Response(null,{status:302,headers:{Location:asset.externalUrl,'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow'}});
   }
-  const range=req.headers.get('Range');if(range&&!/^bytes=\d*-\d*$/.test(range))throw new HttpError(416,'Unsupported file range.');
+  // Never transmit original PDF or PowerPoint bytes. Older links (even those
+  // with ?view=1 or ?download=1) now go to our page-image viewer instead.
+  if(/\.(pdf|pptx)$/.test(key)){
+    if(req.method==='HEAD'||req.headers.has('Range'))throw new HttpError(403,'The original document is view-only.');
+    const location='/sample/?file='+encodeURIComponent(key)+'&label='+encodeURIComponent(asset.label||key);
+    return new Response(null,{status:302,headers:{Location:location,'Cache-Control':'private, no-store','Referrer-Policy':'no-referrer','X-Robots-Tag':'noindex, nofollow','X-Content-Type-Options':'nosniff'}});
+  }
+  if(!/\.mp4$/.test(key)||asset.kind!=='VIDEO'||new URL(req.url).searchParams.get('play')!=='1'){
+    throw new HttpError(403,'This work sample is view-only. Open it in the portfolio viewer.');
+  }
+  if(Object.hasOwn(asset,'externalUrl'))throw new HttpError(403,'Use the hosted video provider to view this video.');
+  const range=req.headers.get('Range');if(range&&!/^bytes=\d*-\d*$/.test(range))throw new HttpError(416,'Unsupported media range.');
   const head=await env.PRIVATE_ASSETS.head('files/'+key);if(!head)throw new HttpError(404,'This work sample is not available yet.');
-  const inlineVideo=asset.kind==='VIDEO'&&key.endsWith('.mp4')&&new URL(req.url).searchParams.get('play')==='1';
-  const ext=key.split('.').pop();
-  const inlineDocument=new URL(req.url).searchParams.get('view')==='1'&&['pdf','png','jpg','webp'].includes(ext);
-  const disposition=`${(inlineVideo||inlineDocument)?'inline':'attachment'}; filename="${key}"`;
-  const h=new Headers({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow','Content-Disposition':disposition,'Accept-Ranges':'bytes','Referrer-Policy':'no-referrer'});
-  head.writeHttpMetadata(h);h.set('Cache-Control','private, no-store');
-  // Only an explicitly requested, declared MP4 video may play inline after authorization.
-  // Object metadata must not turn other protected downloads into inline documents.
-  h.set('Content-Disposition',disposition);
-  // Force a safe content type; uploaded HTML / SVG / scripts are never rendered inline.
-  const types={pdf:'application/pdf',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',mp4:'video/mp4',jpg:'image/jpeg',png:'image/png',webp:'image/webp'};
-  h.set('Content-Type',types[ext]||'application/octet-stream');
+  const h=new Headers({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow','Content-Disposition':'inline','Accept-Ranges':'bytes','Referrer-Policy':'no-referrer','Content-Type':'video/mp4'});
   if(req.method==='HEAD'){h.set('Content-Length',String(head.size));return new Response(null,{headers:h});}
   let options;
-  if(range){const [,first,last]=range.match(/^bytes=(\d*)-(\d*)$/);if(!first&&!last)throw new HttpError(416,'Invalid file range.');if(!first){const len=Number(last);if(len<1)throw new HttpError(416,'Invalid file range.');options={range:{suffix:Math.min(len,head.size)}};}else{const start=Number(first),end=last?Math.min(Number(last),head.size-1):head.size-1;if(start>=head.size||end<start)throw new HttpError(416,'File range out of bounds.');options={range:{offset:start,length:end-start+1}};}}
+  if(range){const [,first,last]=range.match(/^bytes=(\d*)-(\d*)$/);if(!first&&!last)throw new HttpError(416,'Invalid media range.');if(!first){const len=Number(last);if(len<1)throw new HttpError(416,'Invalid media range.');options={range:{suffix:Math.min(len,head.size)}};}else{const start=Number(first),end=last?Math.min(Number(last),head.size-1):head.size-1;if(start>=head.size||end<start)throw new HttpError(416,'Media range out of bounds.');options={range:{offset:start,length:end-start+1}};}}
   const object=await env.PRIVATE_ASSETS.get('files/'+key,options);if(!object)throw new HttpError(404,'File not found.');
   if(range&&object.range){const r=object.range,start=r.offset??Math.max(0,head.size-r.suffix),length=r.length??r.suffix;h.set('Content-Range',`bytes ${start}-${start+length-1}/${head.size}`);h.set('Content-Length',String(length));return new Response(object.body,{status:206,headers:h});}
   h.set('Content-Length',String(head.size));return new Response(object.body,{headers:h});
@@ -143,7 +176,7 @@ export async function onRequest(context){
   try {
     if(path==='config'&&req.method==='GET'){
       const status=accessStatus(env);
-      return json({ready:status.passwordReady,passwordReady:status.passwordReady,requestsReady:status.requestsReady,ownerReady:status.ownerReady,passwordEnabled:status.passwordEnabled,turnstileSiteKey:env.TURNSTILE_SITE_KEY||null,missing:status.missing});
+      return json({ready:status.passwordReady,passwordReady:status.passwordReady,requestsReady:status.requestsReady,ownerReady:status.ownerReady,passwordEnabled:status.passwordEnabled,viewerVersion:'3.4',turnstileSiteKey:env.TURNSTILE_SITE_KEY||null,missing:status.missing});
     }
     const requirement=path==='password-login'?'password':path==='admin/login'?'owner':(path==='request-access'||path==='login')?'requests':'storage';
     ensureReady(env,requirement);
@@ -152,6 +185,13 @@ export async function onRequest(context){
     if(req.method==='POST')checkOrigin(req);
     if(path==='session'&&req.method==='GET')return json({authorized:!!await session(req,env)});
     if(path==='projects'&&req.method==='GET'){await requireSession(req,env);return json({projects:await getCases(env)});}
+    if(path.startsWith('preview/')&&isGet){
+      await requireSession(req,env);
+      const match=path.slice('preview/'.length).match(/^([^/]+)\/(manifest|[0-9]{1,4})$/);
+      if(!match)throw new HttpError(404,'Preview not found.');
+      let key;try{key=decodeURIComponent(match[1]);}catch{throw new HttpError(400,'Invalid preview.');}
+      return await servePreview(req,env,key,match[2]);
+    }
     if(path.startsWith('asset/')&&isGet){
       await requireSession(req,env);let key;
       try{key=decodeURIComponent(path.slice(6));}catch{throw new HttpError(400,'Invalid file.');}

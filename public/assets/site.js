@@ -95,12 +95,7 @@
 
   function cardVisual(p) {
     const kicker = p.id === 'webinar-delivery' ? '<span class="work-stat-kicker">UP TO</span>' : '';
-    return `<div class="work-card-visual work-visual-${esc(p.visual)}"><div class="work-front"><svg class="work-deco" data-watermark="personal" viewBox="0 0 480 320" fill="none" aria-hidden="true" focusable="false">
-<g class="wm-portal"><path class="wm-band" d="M208 64C268 -8 313 137 376 57S459 8 518 96" style="--wm-band:24px"/><path class="wm-band" d="M220 162C280 88 328 229 390 149S471 100 530 188" style="--wm-band:24px"/><path class="wm-solid" d="M385 245L440 213L468 267L414 299Z"/></g>
-<g class="wm-wave"><path class="wm-band" d="M232 -30C420 16 200 102 394 146S210 256 480 350" style="--wm-band:24px"/><path class="wm-band" d="M292 -30C480 16 260 102 454 146S270 256 540 350" style="--wm-band:24px"/><path class="wm-solid" d="M252 250H300V298H252Z"/></g>
-<g class="wm-fan"><path class="wm-band" d="M355 30V290M220 160H490M255 55L460 266M460 55L255 266" style="--wm-band:24px"/><path class="wm-solid" d="M332 137C349 121 375 125 390 142C410 163 392 198 365 202C329 205 310 170 332 137Z"/></g>
-<g class="wm-blob"><path class="wm-solid" d="M370 -6C442 -20 520 58 482 133C529 191 466 261 387 243C355 306 249 253 261 178C215 113 287 20 370 -6Z"/><path class="wm-band" d="M250 262L298 217L335 254L382 208L429 245" style="--wm-band:16px"/></g>
-</svg><div class="work-front-top"><span>${esc(p.category.toUpperCase())}</span><span>${esc(p.number)} /</span></div><div class="work-stat-block">${kicker}<strong class="work-front-stat">${esc(p.outcome)}</strong><span class="work-front-label">${esc(workFrontLabel(p))}</span></div><div class="work-front-bottom"><span class="work-hint-desktop">HOVER TO PREVIEW</span><span class="work-hint-touch">A CLOSER LOOK BELOW</span><span aria-hidden="true">↗</span></div></div>${workPeekContent(p)}</div>`;
+    return `<div class="work-card-visual work-visual-${esc(p.visual)}"><div class="work-front"><svg class="work-deco" data-watermark="editorial" viewBox="0 0 480 320" fill="none" aria-hidden="true" focusable="false">${Number(p.number)%2 ? '<path class="work-gesture" d="M320 90C345 36 366 49 370 81C372 110 402 120 415 83C425 53 449 42 488 78" />' : '<path class="work-blob" d="M385 21C413 8 436 23 450 42C481 42 505 72 484 104C500 129 470 158 438 153C416 168 379 153 374 127C345 115 346 85 369 69C364 47 369 32 385 21Z" />'}</svg><div class="work-front-top"><span>${esc(p.category.toUpperCase())}</span><span>${esc(p.number)} /</span></div><div class="work-stat-block">${kicker}<strong class="work-front-stat">${esc(p.outcome)}</strong><span class="work-front-label">${esc(workFrontLabel(p))}</span></div><div class="work-front-bottom"><span class="work-hint-desktop">HOVER TO PREVIEW</span><span class="work-hint-touch">A CLOSER LOOK BELOW</span><span aria-hidden="true">↗</span></div></div>${workPeekContent(p)}</div>`;
   }
 
   function card(p) {
@@ -264,10 +259,15 @@
   }
   function privateAsset(a,p) {
     if(!a.available) return `<div class="case-file case-file-missing"><span class="case-file-icon" aria-hidden="true">?</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>Available by request</small></span><a class="case-file-action" href="mailto:goldinthecracksofficial@gmail.com?subject=${encodeURIComponent('Work sample request: '+p.title+' — '+a.label)}">Request ↗</a></div>`;
+    const isSlides=/\.pptx$/i.test(a.key);
+    const isDocument=isSlides||/\.pdf$/i.test(a.key);
     const fileUrl=`/sample/?file=${encodeURIComponent(a.key)}&amp;label=${encodeURIComponent(a.label)}&amp;case=${encodeURIComponent(p.title)}`;
-    const destination=a.externalUrl?esc(a.externalUrl):fileUrl;
-    const action='View';
-    return `<a class="case-file case-file-download" href="${destination}" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">${a.kind==='VIDEO'?'▶':a.kind==='PRESENTATION'?'▤':'↗'}</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>${esc(a.kind)} · ${a.externalUrl?'YouTube video':a.kind==='PRESENTATION'?'View-only slides':'Private view-only preview'}</small></span><span class="case-file-action">${action} ↗</span></a>`;
+    // A document/presentation is always viewed as page images, never linked
+    // to its R2 original (even if the case-study JSON contains externalUrl).
+    const destination=(!isDocument&&a.kind==='VIDEO'&&a.externalUrl)?esc(a.externalUrl):fileUrl;
+    const action=isSlides?'View slides':'View';
+    const descriptor=isSlides?'SLIDE DECK · View-only slides':/\.pdf$/i.test(a.key)?'DOCUMENT · View-only pages':a.externalUrl&&a.kind==='VIDEO'?'VIDEO · Hosted playback':'VIDEO · Private streaming';
+    return `<a class="case-file case-file-view" href="${destination}" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">${a.kind==='VIDEO'?'▶':isSlides?'▤':'↗'}</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>${descriptor}</small></span><span class="case-file-action">${action} ↗</span></a>`;
   }
   function renderPrivateCase(p) {
     return `<article class="case-study" id="case-${esc(p.id)}"><div class="case-study-heading"><p class="eyebrow red">Project ${esc(p.number)} / ${esc(p.category)}</p><h3>${esc(p.title)}</h3><p class="case-summary">${esc(p.summary)}</p></div><div class="case-study-columns"><div class="case-narrative"><div class="chips">${chips(p)}</div><div class="case-parts"><div><h4>The challenge</h4><p>${esc(p.challenge)}</p></div><div><h4>The idea & what I did</h4><p>${esc(p.approach)}</p></div><div><h4>The outcome</h4><p>${esc(p.impact)}</p></div></div><div class="case-outcome"><strong>${esc(p.outcome)}</strong><span>${esc(p.outcomeLabel)}</span></div></div><aside class="case-preview" aria-label="Work sample previews for ${esc(p.title)}"><div class="case-preview-top"><span>INSIDE THE WORK</span><span>${p.assets.length} SAMPLE${p.assets.length===1?'':'S'}</span></div>${privatePreviewVisual(p)}<div class="case-preview-files">${p.assets.map(a=>privateAsset(a,p)).join('')}</div><p class="case-preview-help" role="status" aria-live="polite" hidden></p></aside></div>${renderLearningPath(p)}</article>`;
