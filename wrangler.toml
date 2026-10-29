@@ -14,7 +14,7 @@ not_found_handling = "404-page"
 SITE_ORIGIN = "https://peterverdin.goldinthecracksofficial.workers.dev"
 ADMIN_EMAIL = "goldinthecracksofficial@gmail.com"
 REPLY_TO = "goldinthecracksofficial@gmail.com"
-EMAIL_FROM = "Peter Verdin <access@YOUR-VERIFIED-DOMAIN>"
+EMAIL_FROM = "Peter Verdin <DrPete@peterverdin.com>"
 TURNSTILE_SITE_KEY = "0x4AAAAAAFrc2sQMmKPLyNkU"
 
 [[d1_databases]]
