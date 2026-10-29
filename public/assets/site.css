@@ -1008,3 +1008,55 @@ a[href^="mailto:"]{overflow-wrap:anywhere}
 
 #private-content .case-index-swipe{display:none}
 @media(max-width:1160px){#private-content .case-index-swipe{display:inline;color:#efbcb2}}
+
+
+/* v3.2 — Playful personal graphics, not a repeated corporate arch.
+   Every résumé tile uses a distinct hand-drawn squiggle, burst, ribbon or paper cutout;
+   the marks are decorative SVGs and remain behind the outcome/labels. */
+.career-page .career-tile-mark[data-watermark="personal"]{
+  position:absolute;right:-12px;top:-12px;width:125px;height:125px;
+  color:#29221f;opacity:.19;transform:rotate(-8deg);
+  transition:transform .35s ease,opacity .35s ease;
+  pointer-events:none;z-index:0;
+}
+.career-page .career-tile .career-tile-mark[data-watermark="personal"] .wm-band{
+  stroke:currentColor;fill:none;stroke-width:var(--wm-band,6px);stroke-linecap:round;stroke-linejoin:round;
+}
+.career-page .career-tile .career-tile-mark[data-watermark="personal"] .wm-solid{fill:currentColor;stroke:none}
+.career-page .career-tile .career-tile-mark[data-watermark="personal"] .wm-accent{fill:#db3026;stroke:none;opacity:.85}
+.career-page .career-tile:first-child .career-tile-mark[data-watermark="personal"]{color:#f5f0e8;opacity:.28}
+.career-page .career-tile:first-child .career-tile-mark[data-watermark="personal"] .wm-accent{fill:#ff574e;opacity:1}
+.career-page .career-tile:nth-child(2) .career-tile-mark[data-watermark="personal"]{color:#453b32;opacity:.23;transform:rotate(17deg);right:-5px;top:-5px}
+.career-page .career-tile:nth-child(3) .career-tile-mark[data-watermark="personal"]{color:#db3026;opacity:.27;transform:rotate(-18deg);right:-17px;top:-9px}
+.career-page .career-tile:nth-child(4) .career-tile-mark[data-watermark="personal"]{color:#3c332d;opacity:.2;transform:rotate(13deg);right:-6px;top:0}
+.career-page .career-visual-trigger:hover .career-tile-mark[data-watermark="personal"]{transform:translate(-3px,3px) rotate(7deg);opacity:.31}
+.career-page .career-tile-index{font-size:12px}
+.career-page .career-visual-caption{font-size:12px;letter-spacing:.01em}
+.career-page .career-visual-caption>span{font-size:12px}
+.career-page .career-index a{font-size:12px;line-height:1.4}
+.career-page .career-role-time>p,.career-page .career-role-time>span{font-size:13px}
+.career-page .career-related>span{font-size:12px}
+.career-page .career-related a{font-size:14px}
+.career-page .career-experience-tools>p{font-size:12px}
+.career-page .career-expand-all{font-size:12px!important}
+.work-project-card .work-deco[data-watermark="personal"]{color:#171717;opacity:.18;z-index:0;overflow:hidden}
+.work-project-card:nth-child(4n+2) .work-deco[data-watermark="personal"],
+.work-project-card:nth-child(4n+3) .work-deco[data-watermark="personal"]{color:#db3026;opacity:.23}
+.work-project-card .work-deco[data-watermark="personal"] .wm-band{fill:none;stroke:currentColor;stroke-width:var(--wm-band,24px);stroke-linecap:round;stroke-linejoin:round}
+.work-project-card .work-deco[data-watermark="personal"] .wm-solid{fill:currentColor;stroke:none}
+.work-project-card .work-deco[data-watermark="personal"]>g{display:none}
+.work-project-card:nth-child(4n+1) .work-deco[data-watermark="personal"]>.wm-portal,
+.work-project-card:nth-child(4n+2) .work-deco[data-watermark="personal"]>.wm-wave,
+.work-project-card:nth-child(4n+3) .work-deco[data-watermark="personal"]>.wm-fan,
+.work-project-card:nth-child(4n) .work-deco[data-watermark="personal"]>.wm-blob{display:inline}
+@media(max-width:650px){
+ .career-page .career-tile-mark[data-watermark="personal"]{width:90px;height:90px;right:-8px;top:-6px}
+ .career-page .career-visual-caption{font-size:10px}
+ .career-page .career-index a{font-size:12px}
+ .career-page .career-tile-index{font-size:11px}
+ .career-page .career-related a{font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){
+ .career-page .career-tile-mark[data-watermark="personal"]{transition:none}
+}
+@media print{.career-page .career-tile-mark[data-watermark="personal"],.work-project-card .work-deco[data-watermark="personal"]{display:none!important}}

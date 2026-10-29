@@ -1,9 +1,9 @@
 {
   "name": "peter-verdin-portfolio",
-  "version": "3.0.0",
+  "version": "3.2.0",
   "private": true,
   "type": "module",
-  "description": "Approved narrative portfolio with public career evidence and server-authorized case studies and downloads.",
+  "description": "Approved narrative portfolio with public career evidence and server-authorized case studies and view-only samples.",
   "engines": {
     "node": ">=24.0.0"
   },
