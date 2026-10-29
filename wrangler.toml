@@ -16,12 +16,12 @@ SITE_ORIGIN = "https://peterverdin.goldinthecracksofficial.workers.dev"
 ADMIN_EMAIL = "goldinthecracksofficial@gmail.com"
 REPLY_TO = "goldinthecracksofficial@gmail.com"
 EMAIL_FROM = "Peter Verdin <access@YOUR-VERIFIED-DOMAIN>"
-TURNSTILE_SITE_KEY = "REPLACE_WITH_REAL_SITE_KEY"
+TURNSTILE_SITE_KEY = "0x4AAAAAAFrc2sQMmKPLyNkU"
 
 [[d1_databases]]
 binding = "DB"
 database_name = "peter-verdin-access"
-database_id = "REPLACE_WITH_REAL_DATABASE_ID"
+database_id = "db8121a2-f5ee-4e3a-b2b8-af2f2c44f63d"
 
 [[r2_buckets]]
 binding = "PRIVATE_ASSETS"
