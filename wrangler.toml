@@ -1,5 +1,4 @@
-# Use ONLY for Workers -> existing workers.dev deployment. Rename to wrangler.worker.toml
-# Fill in the real nonsecret values, D1 ID and R2 name before deployment.
+
 name = "peterverdin"
 main = "worker/index.js"
 compatibility_date = "2026-10-29"
