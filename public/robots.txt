@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /access/
+Disallow: /api/
+Sitemap: https://peterverdin.com/sitemap.xml

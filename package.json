@@ -1,0 +1,25 @@
+{
+  "name": "peter-verdin-portfolio",
+  "version": "2.3.0",
+  "private": true,
+  "type": "module",
+  "description": "Approved narrative portfolio with public career evidence and server-authorized case studies and downloads.",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "check": "node scripts/check-build.mjs",
+    "build": "npm run check",
+    "preview": "python3 -m http.server 8080 --directory public",
+    "dev": "wrangler pages dev public --local-protocol=https",
+    "deploy": "wrangler pages deploy public --project-name=peter-verdin --branch main",
+    "test": "node tests/api.test.mjs",
+    "assets:check": "node scripts/private-assets.mjs check",
+    "assets:sync": "node scripts/private-assets.mjs sync",
+    "assets:upload": "node scripts/private-assets.mjs upload",
+    "config:check": "node scripts/check-config.mjs"
+  },
+  "devDependencies": {
+    "wrangler": "4.155.0"
+  }
+}

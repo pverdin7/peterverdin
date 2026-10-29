@@ -1,0 +1,21 @@
+# Copy to wrangler.toml and fill the real identifiers and account-specific values.
+# Non-secret configuration belongs here. Secrets belong in Cloudflare.
+name = "peter-verdin"
+pages_build_output_dir = "public"
+compatibility_date = "2026-10-01"
+
+[vars]
+SITE_ORIGIN = "https://YOUR-ACTUAL-PROJECT.pages.dev"
+ADMIN_EMAIL = "goldinthecracksofficial@gmail.com"
+REPLY_TO = "goldinthecracksofficial@gmail.com"
+EMAIL_FROM = "Peter Verdin <access@YOUR-VERIFIED-DOMAIN>"
+TURNSTILE_SITE_KEY = "REPLACE_WITH_REAL_SITE_KEY"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "peter-verdin-access"
+database_id = "REPLACE_WITH_REAL_DATABASE_ID"
+
+[[r2_buckets]]
+binding = "PRIVATE_ASSETS"
+bucket_name = "peter-verdin-private"
