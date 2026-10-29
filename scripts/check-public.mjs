@@ -5,7 +5,7 @@ const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirector
 const files=walk(root),errors=[];
 for(const file of files){
  const rel=path.relative(root,file);
- if(/(^|\/)(private|owner-review|originals)(\/|$)|case-studies\.json|asset-manifest|\.dev\.vars|\.env|schema\.sql|\.pdf$/i.test(rel))errors.push('Private/config document in public output: '+rel);
+ if(/(^|\/)(private|owner-review|originals)(\/|$)|case-studies\.json|asset-manifest|\.dev\.vars|\.env|schema\.sql/i.test(rel) || (/\.pdf$/i.test(rel) && rel!=='assets/dr-peter-verdin-resume.pdf'))errors.push('Private/config document in public output: '+rel);
  if(/\.(html|js|json|svg|css)$/.test(file)){
   const text=fs.readFileSync(file,'utf8');
   if(/OWNER_PREVIEW|PREVIEW_CASES|PREVIEW_PAGES|PREVIEW_IMAGES|previewCodeDigest|data-preview-unlock|re_[A-Za-z0-9]{20,}/.test(text))errors.push('Owner-preview data or possible secret in public output: '+rel);

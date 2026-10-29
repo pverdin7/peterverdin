@@ -1,3 +1,11 @@
+# IMPORTANT — updated access fix and larger-font launch (Oct 29, 2026)
+
+**Current website: workers.dev.** The last deployment lacked the API router and returned 404 at `/api/config`. This release supports both Pages and Workers. Before updating GitHub, read [ACCESS-SETUP-CHECK.md](ACCESS-SETUP-CHECK.md) and decide whether to keep the Workers URL (recommended if it is already configured) or move to Pages. Do **not** transfer the domain yet.
+
+The public résumé button now opens **your uploaded five-page PDF**. That PDF is intentionally PUBLIC. It contains the original contact details and professional references; inspect it before launch.
+
+To keep your existing `workers.dev` address, use `worker/index.js`, `wrangler.worker.example.toml` copied to `wrangler.worker.toml` with real non-secret settings, and the Cloudflare secret/binding setup in ACCESS-SETUP-CHECK.md. Simply updating CSS or uploading the `/public` folder does not install the API.
+
 # Start here: Peter Verdin’s Cloudflare build
 
 **For GitHub:** Extract `Peter-Verdin-GitHub-Ready.zip` and upload its contents, not the ZIP. Put `package.json`, `public/`, and `functions/` at the repository root.
@@ -40,6 +48,10 @@ Connect the repository to **Cloudflare Pages**, with:
 | Build variable | `NODE_VERSION=24` |
 
 Use the resulting `pages.dev` address for review. [Cloudflare’s Git integration guide](https://developers.cloudflare.com/pages/get-started/git-integration/) explains this connection.
+
+**Choose Pages when creating the Cloudflare application.** This package’s `functions/` directory is compiled by Pages. Uploading only `public/` to a Worker can display the design while leaving the access service unavailable. A `workers.dev` deployment needs an explicit Worker entry-point adaptation, which this Pages package does not include. You can connect the same GitHub repository to a new Pages project; no redesign or new repository is required.
+
+After the first deployment, open `/api/config` on its `pages.dev` address. It must return JSON with `ready`, `turnstileSiteKey`, and `passwordEnabled`. A 404 or an HTML page means the API was not deployed or routed correctly. A JSON response with `ready: false` means the API is present and the account settings in the next section still need attention. Neither result is an incorrect-code response; keep the existing visitor code.
 
 ## 4. Connect the access services
 

@@ -110,7 +110,7 @@ test('oversized requests are rejected',async()=>{const f=fixture();try{const r=a
 test('owner configuration requires a separate password of 20 to 200 characters',async()=>{const f=fixture();try{
  for(const value of ['short','x'.repeat(201),f.env.PORTFOLIO_PASSWORD]){
   f.env.OWNER_PASSWORD=value;
-  assert.equal((await (await f.call('config')).json()).ready,false);
+  assert.equal((await (await f.call('config')).json()).ownerReady,false);
   assert.equal((await f.call('admin/login',{password:value,turnstileToken:'valid-admin'})).status,503);
  }
  assert.equal(f.db.db.prepare('SELECT COUNT(*) AS count FROM sessions').get().count,0);
@@ -138,7 +138,7 @@ test('expired sessions and disabled shared-code access fail closed',async()=>{co
  const login=await f.call('password-login',{password:f.env.PORTFOLIO_PASSWORD,turnstileToken:'valid-password'});const visitor=cookieHeader(login);
  f.db.db.prepare('UPDATE sessions SET expires_at=0').run();assert.equal((await f.call('projects',undefined,{cookie:visitor})).status,401);
  delete f.env.PORTFOLIO_PASSWORD;assert.equal((await (await f.call('config')).json()).passwordEnabled,false);
- assert.equal((await f.call('password-login',{password:'anything',turnstileToken:'valid-password'})).status,400);
+ assert.equal((await f.call('password-login',{password:'anything',turnstileToken:'valid-password'})).status,503);
 }finally{f.close();}});
 
 test('transactional Reply-To can be overridden without changing the verified sender or recipient',async()=>{const f=fixture();try{
@@ -222,4 +222,42 @@ test('private asset helper synchronizes hosted availability and uploads only ori
   synced[0].assets[1].externalUrl='https://untrusted.invalid/';fs.writeFileSync(source,JSON.stringify(synced));
   r=run('check');assert.notEqual(r.status,0);assert.match(r.stderr,/Invalid hosted video URL/);
  }finally{fs.rmSync(dir,{recursive:true,force:true});}
+});
+
+
+test('shared code works when email service and owner login are not configured',async()=>{const f=fixture();try{
+ delete f.env.RESEND_API_KEY;delete f.env.EMAIL_FROM;delete f.env.ADMIN_EMAIL;delete f.env.SITE_ORIGIN;delete f.env.OWNER_PASSWORD;
+ const cfg=await (await f.call('config')).json();
+ assert.equal(cfg.ready,true);assert.equal(cfg.passwordReady,true);assert.equal(cfg.requestsReady,false);assert.equal(cfg.ownerReady,false);
+ const denied=await f.call('password-login',{password:'wrong',turnstileToken:'valid-password'});assert.equal(denied.status,401);
+ const login=await f.call('password-login',{password:f.env.PORTFOLIO_PASSWORD,turnstileToken:'valid-password'});assert.equal(login.status,200);
+ assert.equal((await f.call('projects',undefined,{cookie:cookieHeader(login)})).status,200);
+ assert.equal((await f.call('request-access',{name:'Visitor',email:'v@example.com',organization:'Example',turnstileToken:'valid-request'})).status,503);
+}finally{f.close();}});
+
+test('missing R2, D1 or Turnstile blocks private content and identifies missing binding names',async()=>{const f=fixture();try{
+ delete f.env.PRIVATE_ASSETS;delete f.env.TURNSTILE_SECRET_KEY;
+ const cfg=await (await f.call('config')).json();assert.equal(cfg.passwordReady,false);
+ assert.ok(cfg.missing.includes('PRIVATE_ASSETS'));assert.ok(cfg.missing.includes('TURNSTILE_KEYS'));
+ assert.equal((await f.call('password-login',{password:f.env.PORTFOLIO_PASSWORD,turnstileToken:'valid-password'})).status,503);
+ assert.equal((await f.call('projects')).status,503);
+}finally{f.close();}});
+
+test('Worker adapter routes API without exposing private content and delegates public assets',async()=>{
+ const worker=(await import('../worker/index.js')).default;const f=fixture();try{
+ const pubReq=new Request('https://example.com/');const publicReply=Response.redirect('https://example.com/public',302);
+ f.env.ASSETS={async fetch(request){assert.equal(request,pubReq);return publicReply;}};
+ const site=await worker.fetch(pubReq,f.env,{});assert.equal(site,publicReply);
+ const apiRes=await worker.fetch(new Request('https://example.com/api/config'),f.env,{});
+ assert.equal((await apiRes.json()).passwordReady,true);
+ const unsafe=await worker.fetch(new Request('https://example.com/api/projects'),f.env,{});assert.equal(unsafe.status,401);
+}finally{f.close();}});
+
+test('public resume link points at the bundled, original PDF',()=>{
+ const pdf=fs.readFileSync(new URL('../public/assets/dr-peter-verdin-resume.pdf',import.meta.url));
+ assert.equal(pdf.subarray(0,4).toString(),'%PDF');
+ for(const page of ['my-work','resume']){
+  const html=fs.readFileSync(new URL(`../public/${page}/index.html`,import.meta.url),'utf8');
+  assert.match(html,/id="print-resume"[^>]*href="\/assets\/dr-peter-verdin-resume\.pdf"/);
+ }
 });

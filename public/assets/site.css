@@ -683,7 +683,7 @@ a.contact-line:hover {background:#EEE0D2;color:var(--accent-ink)}
 
 
 
-/* Sculptural watermarks: op-art rhythm, rounded shoulders and a stepped interruption.
+/* Sculptural watermarks: geometric cuts, wiggly strokes and blobby mid-century forms.
    The marks stay behind content and use only the existing red, cream and charcoal. */
 .work-project-card .work-front{isolation:isolate}
 .work-project-card .work-deco[data-watermark="sculptural"]{color:#171717;opacity:.14;z-index:0;overflow:hidden}
@@ -796,3 +796,72 @@ a.contact-line:hover {background:#EEE0D2;color:var(--accent-ink)}
 
 /* The public contact address wraps without changing the approved layout. */
 a[href^="mailto:"]{overflow-wrap:anywhere}
+
+
+/* 2026-10-29 accessibility/readability pass. Keep display typography, enlarge
+   functional labels and metadata throughout story, work, résumé and dialogs. */
+:root{--pv-readable-label:13px}
+.agency .identity-sub,.agency .site-header .identity-sub{font-size:11px;letter-spacing:.05em}
+.agency .eyebrow,.story-root .eyebrow,.experience-page .experience-eyebrow{font-size:13px;letter-spacing:.08em}
+.story-root .story-hero-kicker,.story-root .story-fit .story-quiet-link{font-size:14px}
+.story-root .story-nav-inner>a{font-size:16px;line-height:1.4;padding:16px 14px}
+.story-root .story-nav-inner>a small{font-size:13px}
+.story-root .story-stage-eyebrow,.story-root .story-stage-caption,
+.story-root .story-chapter-eyebrow,.story-root .story-hero-caption,
+.story-root .story-picture-caption,.story-root .story-scroll-cue{font-size:13px;line-height:1.45}
+.experience-page .experience-tabs>button>small{font-size:13px;line-height:1.4;letter-spacing:0;max-width:none}
+.experience-page .experience-tabs>button>span{font-size:18px}
+.experience-page .experience-viewbar-note,.experience-page .experience-viewbar-hint{font-size:13px}
+.experience-page .career-page .career-eyebrow{font-size:14px;line-height:1.5;letter-spacing:.035em}
+.experience-page .career-page .career-eyebrow span{font-size:13px}
+.experience-page .career-page .career-index a{font-size:14px;line-height:1.4;padding:17px 19px}
+.experience-page .career-page .career-index .career-eyebrow{font-size:13px}
+.experience-page .career-page .career-role-time>p{font-size:15px;line-height:1.5}
+.experience-page .career-page .career-role-time>span{font-size:14px;line-height:1.5}
+.experience-page .career-page .career-visual-caption{font-size:13px;line-height:1.5;letter-spacing:.025em;gap:16px}
+.experience-page .career-page .career-visual-caption>span{font-size:13px;text-align:right}
+.experience-page .career-page .career-tile-index{font-size:12px}
+.experience-page .career-page .career-tile-label{font-size:16px}
+.experience-page .career-page .career-tile-caption{font-size:14px;line-height:1.45}
+.experience-page .career-page .career-related>span,
+.experience-page .career-page .career-experience-tools>p,
+.experience-page .career-page .career-profile-details summary{font-size:14px;line-height:1.5}
+.experience-page .career-page .career-print{font-size:14px;line-height:1.35;display:inline-flex;align-items:center;justify-content:center;gap:12px;text-decoration:none}
+.experience-page .career-page .career-standard-heading span{font-size:14px}
+.experience-page .work-project-card .work-front-top,
+.experience-page .work-project-card .work-front-bottom,
+.experience-page .work-project-card .work-peek-eyebrow,
+.experience-page .work-role-eyebrow{font-size:12px;line-height:1.5}
+.experience-page .work-project-card .project-meta,
+.experience-page .work-project-card .project-body>p,
+.experience-page .work-project-card .work-role-copy span{font-size:14px;line-height:1.55}
+.experience-page .work-project-card .work-role-copy strong{font-size:16px}
+.experience-page .work-project-card .lock-label{font-size:12px}
+.experience-page .work-project-card .chip{font-size:12px}
+.access-dialog-v2 .access-project-context .eyebrow{font-size:12px}
+.access-dialog-v2 .access-project-context>p:last-child{font-size:14px}
+.access-dialog-v2 .signin-link,.access-dialog-v2 .form-fine{font-size:13px}
+.access-dialog-v2 .field label,.access-dialog-v2 .form-status{font-size:14px}
+.publishing-section .publishing-eyebrow,.publishing-section .publishing-role,
+.publishing-section .publishing-link{font-size:13px}
+.learning-path .learning-path-eyebrow,.learning-path .learning-path-status{font-size:13px}
+.learning-path .learning-path-number{font-size:13px}
+.learning-path-review-note,.learning-path-download,.learning-path-next{font-size:14px}
+@media(max-width:850px){
+ .experience-page .career-page .career-index a{font-size:14px}
+ .experience-page .career-page .career-role-time>p{font-size:14px}
+}
+@media(max-width:650px){
+ .experience-page .career-page .career-eyebrow{font-size:13px}
+ .experience-page .career-page .career-index a{font-size:14px;padding:14px 16px}
+ .experience-page .career-page .career-visual-caption{font-size:13px;flex-wrap:wrap;gap:8px}
+ .experience-page .career-page .career-tile-index{font-size:12px}
+ .experience-page .experience-tabs>button>small{font-size:12px}
+ .experience-page .career-page .career-role-time>span{font-size:14px}
+ .story-root .story-nav-inner>a{font-size:14px;padding:13px 9px}
+ .story-root .story-nav-inner>a small{font-size:12px}
+}
+@media print{
+ .experience-page .career-page .career-visual-caption,
+ .experience-page .career-page .career-eyebrow{font-size:10pt}
+}

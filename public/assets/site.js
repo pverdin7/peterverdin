@@ -149,7 +149,10 @@
   }
   async function getConfig() {
     if(pendingConfig)return pendingConfig;
-    pendingConfig=api('config').then(x=>config=x).catch(()=>{pendingConfig=null;return config={ready:false};});
+    pendingConfig=api('config').then(x=>config=x).catch(err=>{
+      pendingConfig=null;
+      return config={ready:false,passwordReady:false,requestsReady:false,connectionError:err.message};
+    });
     return pendingConfig;
   }
   async function renderTurnstile() {
@@ -175,7 +178,13 @@
     try {
       await getConfig();
       const data=Object.fromEntries(new FormData(form));data.turnstileToken=tokenFor(form);
-      if(!config.ready)throw new Error('Portfolio access is temporarily unavailable. Please try again or email goldinthecracksofficial@gmail.com.');
+      const isPassword=endpoint==='password-login';
+      const available=isPassword?config.passwordReady:config.requestsReady;
+      if(!available){
+        if(config.connectionError)throw new Error('The access API has not been deployed at this address. The portfolio code cannot be checked yet. Please email goldinthecracksofficial@gmail.com.');
+        const missing=Array.isArray(config.missing)&&config.missing.length?' Missing: '+config.missing.join(', ')+'.':'';
+        throw new Error('Private access requires Cloudflare configuration.'+missing+' Please email goldinthecracksofficial@gmail.com.');
+      }
       const result=await api(endpoint,data);await success(result);
     } catch(err) {status.textContent=err.message;}
     finally {button.disabled=false;resetWidget(form);}
@@ -301,7 +310,6 @@
     if(target.dataset.openAccess){e.preventDefault();if(!target.closest('#project-dialog'))activeProject='';openAccess(target.dataset.openAccess);return;}
     if(target.dataset.tab){setTab(target.dataset.tab);return;}
     if(target.id==='show-email-login'){$('#email-login-form').hidden=!$('#email-login-form').hidden;renderTurnstile();return;}
-    if(target.id==='print-resume'){window.print();return;}
     if(target.dataset.viewCase){closeDialogs();if(!$('#private-content')){navigate('/my-work/#case-'+target.dataset.viewCase);return;}$('#case-'+target.dataset.viewCase)?.scrollIntoView({behavior:scrollBehavior()});return;}
     if(target.hasAttribute('data-logout')){try{await api('logout',{});authenticated=false;privateCases=[];$('#access-gate').hidden=false;$('#private-content').hidden=true;$('#private-content').innerHTML='';toast('You’re signed out.');}catch(err){toast(err.message);}return;}
     if(target.id==='admin-logout'){target.disabled=true;try{await api('admin/logout',{});adminAuthenticated=false;$('#admin-auth').hidden=false;$('#admin-content').hidden=true;$('#admin-requests').innerHTML='';}catch(err){toast(err.message);}finally{target.disabled=false;}return;}

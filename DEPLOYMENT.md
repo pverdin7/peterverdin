@@ -6,6 +6,8 @@
 
 This build retains the established **Cloudflare Pages + Pages Functions + D1 + private R2** architecture. Use the GitHub route below for ongoing updates; a local Wrangler alternative is included in section 8.
 
+**Cloudflare application type matters:** choose **Pages → Connect to Git**. A Worker static-assets deployment can serve the public design without compiling this package’s `functions/` API. If a `workers.dev` URL returns 404 for `/api/config`, deploy the included Worker adapter and configuration described in ACCESS-SETUP-CHECK.md. An alternative is creating a Pages project in section 2. **This revision includes that conversion** in `worker/index.js` plus `wrangler.worker.example.toml`. To keep the Workers deployment, use the exact steps in [ACCESS-SETUP-CHECK.md](ACCESS-SETUP-CHECK.md); do not switch to Pages unless you prefer it.
+
 ## 1. Prepare the complete local package
 
 Keep the assembled folder as the owner copy. It contains private case-study text, original work samples, launch settings, and an owner preview.
@@ -31,7 +33,7 @@ Create a **private GitHub repository** for this portfolio. Include:
 
 - `public/`, `functions/`, `scripts/`, and `tests/`
 - `package.json`, `package-lock.json`, and `schema.sql`
-- `.gitignore`, `.dev.vars.example`, and `wrangler.example.toml`
+- `.gitignore`, `.dev.vars.example`, and `wrangler.example.toml` and `wrangler.worker.example.toml`
 - `README.md`, `START-HERE.md`, `DEPLOYMENT.md`, and `ASSETS-NEEDED.md`
 - A completed `wrangler.toml` later, containing only the nonsecret configuration described below
 
@@ -212,7 +214,7 @@ Inline video playback uses the explicit route `/api/asset/<key>?play=1`. Authori
 On the actual HTTPS review hostname:
 
 1. Confirm the story, Work & Experience, public résumé details, project previews, contact links, and mobile/keyboard controls work.
-2. Check `/api/config`: `ready` and `passwordEnabled` should be `true`. These flags confirm configuration presence, not successful connections.
+2. Check `/api/config`: `passwordReady` and `passwordEnabled` should be `true`. These flags confirm configuration presence, not successful connections.
 3. In an incognito window, confirm `/api/projects`, `/api/asset/nnu-proposal.pdf`, the inline player route `/api/asset/hbu-introduction.mp4?play=1`, and the hosted-video route `/api/asset/movement-progressions.mp4` reject unauthenticated access.
 4. Enter the visitor code, complete Turnstile, and open all 15 case studies. Download and open all 22 local files, including the 6:39 MTSS introduction and 8.87-second skateboarding clip. Play the guided HBU orientation → Athletic Stance → March 2019 webinar sequence and seek within all three videos. Confirm regular Download links still download the files, the Meaningful Movement Progressions link redirects after authorization, and only the Movement program update video shows a request link.
 5. Log out. Submit an access request using an inbox you control. Confirm it appears in `/admin/` and the notification arrives at the configured Gmail inbox.
@@ -227,6 +229,7 @@ Do not infer delivery from local tests: the tests mock Resend and Turnstile. Liv
 | Symptom | Check |
 |---|---|
 | “Access is not connected” | Both bindings, every required setting, owner-password length/separation, and deployment after setting secrets. |
+| “Portfolio access is temporarily unavailable” and `/api/config` returns 404 or HTML | The configuration API is absent or unrouted. Deploy the included Worker adapter with `wrangler.worker.toml` if using Workers, or deploy the root `functions/` directory through Pages. Serving only `public/` is insufficient. Verify `/api/config` returns JSON before checking the code. |
 | Turnstile fails | Actual hostname, matching site/secret keys, expected action, and a fresh token. |
 | Request saved but notification failed | Resend API key and verified sender; inspect `/admin/` before submitting again. |
 | Private cases are unavailable | `case-studies.json` exists in the bound private bucket. |

@@ -19,8 +19,30 @@ function cookies(req){return Object.fromEntries((req.headers.get('Cookie')||'').
 function json(body,status=200,extra={}) {
   return new Response(JSON.stringify(body),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow','Referrer-Policy':'no-referrer',...extra}});
 }
-function ready(env){return !!(env.DB&&env.PRIVATE_ASSETS&&env.RESEND_API_KEY&&env.EMAIL_FROM&&env.ADMIN_EMAIL&&typeof env.OWNER_PASSWORD==='string'&&env.OWNER_PASSWORD.length>=20&&env.OWNER_PASSWORD.length<=200&&env.OWNER_PASSWORD!==env.PORTFOLIO_PASSWORD&&env.SITE_ORIGIN?.startsWith('https://')&&env.TURNSTILE_SITE_KEY&&env.TURNSTILE_SECRET_KEY&&env.RATE_LIMIT_SALT?.length>=32);}
-function ensureReady(env){if(!ready(env))throw new HttpError(503,'Portfolio access is not connected yet. No request has been submitted. Please use the email on the Contact page.');}
+// Separate capabilities so a working shared code does not depend on Resend,
+// the owner login, or a final-domain URL that may not be configured yet.
+// Protected content always requires a D1 session, private R2, and server-only secrets.
+function accessStatus(env){
+  const missing=[];
+  if(!env.DB?.prepare)missing.push('DB');
+  if(!env.PRIVATE_ASSETS?.get)missing.push('PRIVATE_ASSETS');
+  if(typeof env.RATE_LIMIT_SALT!=='string'||env.RATE_LIMIT_SALT.length<32)missing.push('RATE_LIMIT_SALT');
+  const storageReady=missing.length===0;
+  const challengeReady=!!(env.TURNSTILE_SITE_KEY&&env.TURNSTILE_SECRET_KEY);
+  const passwordEnabled=typeof env.PORTFOLIO_PASSWORD==='string'&&env.PORTFOLIO_PASSWORD.length>0;
+  const ownerEnabled=typeof env.OWNER_PASSWORD==='string'&&env.OWNER_PASSWORD.length>=20&&env.OWNER_PASSWORD.length<=200&&env.OWNER_PASSWORD!==env.PORTFOLIO_PASSWORD;
+  const emailReady=!!(env.RESEND_API_KEY&&env.EMAIL_FROM&&env.ADMIN_EMAIL&&/^https:\/\/[^/]+$/.test(env.SITE_ORIGIN||''));
+  const passwordReady=storageReady&&challengeReady&&passwordEnabled;
+  const ownerReady=storageReady&&challengeReady&&ownerEnabled;
+  const requestsReady=storageReady&&challengeReady&&emailReady;
+  return {storageReady,passwordReady,ownerReady,requestsReady,passwordEnabled,missing:passwordReady?[]:[...missing,...(!challengeReady?['TURNSTILE_KEYS']:[]),...(!passwordEnabled?['PORTFOLIO_PASSWORD']:[])]};
+}
+function ensureReady(env,kind='storage'){
+  const status=accessStatus(env);
+  if(kind==='storage'&&!status.storageReady||kind==='password'&&!status.passwordReady||kind==='owner'&&!status.ownerReady||kind==='requests'&&!status.requestsReady){
+    throw new HttpError(503,'Portfolio access needs Cloudflare setup. The private files remain protected. Please contact the site owner.');
+  }
+}
 function checkOrigin(req){if(req.headers.get('Origin')!==new URL(req.url).origin)throw new HttpError(403,'This action must be submitted from this website.');}
 async function readJSON(req){
   if(!req.headers.get('Content-Type')?.startsWith('application/json'))throw new HttpError(415,'Please submit JSON.');
@@ -117,8 +139,12 @@ async function serveAsset(req,env,key){
 export async function onRequest(context){
   const {request:req,env}=context;const path=new URL(req.url).pathname.replace(/^\/api\//,'').replace(/\/$/,'');
   try {
-    if(path==='config'&&req.method==='GET')return json({ready:ready(env),turnstileSiteKey:env.TURNSTILE_SITE_KEY||null,passwordEnabled:!!env.PORTFOLIO_PASSWORD});
-    ensureReady(env);
+    if(path==='config'&&req.method==='GET'){
+      const status=accessStatus(env);
+      return json({ready:status.passwordReady,passwordReady:status.passwordReady,requestsReady:status.requestsReady,ownerReady:status.ownerReady,passwordEnabled:status.passwordEnabled,turnstileSiteKey:env.TURNSTILE_SITE_KEY||null,missing:status.missing});
+    }
+    const requirement=path==='password-login'?'password':path==='admin/login'?'owner':(path==='request-access'||path==='login')?'requests':'storage';
+    ensureReady(env,requirement);
     const isGet=req.method==='GET'||req.method==='HEAD';
     if(!isGet&&req.method!=='POST')throw new HttpError(405,'Method not allowed.');
     if(req.method==='POST')checkOrigin(req);
@@ -180,6 +206,7 @@ export async function onRequest(context){
       await requireSession(req,env,true);const id=text(data.id,100),action=text(data.action,20);
       const person=await env.DB.prepare('SELECT * FROM access_requests WHERE id=?').bind(id).first();if(!person)throw new HttpError(404,'Request not found.');
       if(action==='approve'||action==='resend'){
+        ensureReady(env,'requests');
         if(action==='resend'&&person.status!=='approved')throw new HttpError(400,'Approve access first.');
         await env.DB.prepare('UPDATE access_requests SET status=\'approved\',approved_at=? WHERE id=?').bind(now(),id).run();
         try{await sendLink(env,person,action==='approve');}catch{throw new HttpError(502,'Access was approved, but the approval email failed. Use “Send a fresh link” to retry.');}

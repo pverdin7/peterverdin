@@ -1,3 +1,15 @@
+# Peter Verdin — GitHub-ready portfolio (October 29, 2026)
+
+## What changed in this release
+
+- Larger typography on navigation, company labels (including Varsity Tutors), role date ranges, highlights captions and other small text.
+- The **Print / Download full résumé** link opens the exact provided five-page PDF at `/assets/dr-peter-verdin-resume.pdf`.
+- Password-access readiness no longer depends on Resend or the separate owner login. Server-side password checks, D1-backed sessions, rate limits, Turnstile checks and private R2 content remain mandatory.
+- Includes **both deployment types**: Pages Functions (`functions/`) and Workers static assets (`worker/index.js`). The previous deployment at `workers.dev` needs the Worker adapter installed for `/api/*` to respond.
+- `GET /api/config` gives `ready`, `passwordReady`, `requestsReady`, `ownerReady` and non-secret `missing` setting names. A 404 means missing API deployment; it cannot be fixed by changing the access code.
+
+**Start with `ACCESS-SETUP-CHECK.md`**, then `START-HERE.md` and `DEPLOYMENT.md`. Keep protected samples outside GitHub.
+
 # Peter Verdin — Cloudflare portfolio build
 
 **For GitHub:** Extract `Peter-Verdin-GitHub-Ready.zip` and upload its contents, not the ZIP. Put `package.json`, `public/`, and `functions/` at the repository root.
