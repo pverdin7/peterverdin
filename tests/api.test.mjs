@@ -261,3 +261,30 @@ test('public resume link points at the bundled, original PDF',()=>{
   assert.match(html,/id="print-resume"[^>]*href="\/assets\/dr-peter-verdin-resume\.pdf"/);
  }
 });
+
+
+test('authorized PDF and image previews are inline only on explicit view=1, with ordinary downloads unchanged',async()=>{const f=fixture();try{
+ f.objects.set('case-studies.json',JSON.stringify([{id:'test',assets:[{key:'sample.pdf',kind:'PDF',available:true},{key:'sample.png',kind:'IMAGE',available:true},{key:'lesson.mp4',kind:'VIDEO',available:true},{key:'slide.pptx',kind:'PRESENTATION',available:true}]}]));
+ for(const key of ['sample.png','lesson.mp4','slide.pptx'])f.objects.set('files/'+key,'12345');
+ const login=await f.call('password-login',{password:f.env.PORTFOLIO_PASSWORD,turnstileToken:'valid-password'}),visitor=cookieHeader(login);
+ for(const key of ['sample.pdf','sample.png']){
+  let r=await f.call('asset/'+key,undefined,{cookie:visitor});assert.match(r.headers.get('Content-Disposition'),/^attachment;/);
+  r=await f.call('asset/'+key+'?view=1',undefined,{cookie:visitor});assert.match(r.headers.get('Content-Disposition'),/^inline;/);
+  assert.equal(r.headers.get('Cache-Control'),'private, no-store');
+  r=await f.call('asset/'+key+'?view=1',undefined,{cookie:visitor,method:'HEAD'});assert.match(r.headers.get('Content-Disposition'),/^inline;/);
+ }
+ for(const key of ['lesson.mp4','slide.pptx']){
+  const r=await f.call('asset/'+key+'?view=1',undefined,{cookie:visitor});assert.match(r.headers.get('Content-Disposition'),/^attachment;/);
+ }
+ assert.equal((await f.call('asset/sample.pdf?view=1')).status,401);
+}finally{f.close();}});
+
+test('public case-study sample links use the permanent sample viewer, not transient popup checks',()=>{
+ const file=fs.readFileSync(new URL('../public/assets/site.js',import.meta.url),'utf8');
+ const viewer=fs.readFileSync(new URL('../public/assets/sample.js',import.meta.url),'utf8');
+ assert.match(file,/\/sample\/\?file=/);
+ assert.doesNotMatch(file,/window\.open\('about:blank'/);
+ assert.doesNotMatch(file,/windowRef\.close\(/);
+ assert.match(viewer,/status===404/);
+ assert.match(viewer,/location\.replace\(url/);
+});

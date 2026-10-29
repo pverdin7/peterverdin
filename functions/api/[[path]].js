@@ -119,7 +119,9 @@ async function serveAsset(req,env,key){
   const range=req.headers.get('Range');if(range&&!/^bytes=\d*-\d*$/.test(range))throw new HttpError(416,'Unsupported file range.');
   const head=await env.PRIVATE_ASSETS.head('files/'+key);if(!head)throw new HttpError(404,'This work sample is not available yet.');
   const inlineVideo=asset.kind==='VIDEO'&&key.endsWith('.mp4')&&new URL(req.url).searchParams.get('play')==='1';
-  const disposition=`${inlineVideo?'inline':'attachment'}; filename="${key}"`;
+  const ext=key.split('.').pop();
+  const inlineDocument=new URL(req.url).searchParams.get('view')==='1'&&['pdf','png','jpg','webp'].includes(ext);
+  const disposition=`${(inlineVideo||inlineDocument)?'inline':'attachment'}; filename="${key}"`;
   const h=new Headers({'Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow','Content-Disposition':disposition,'Accept-Ranges':'bytes','Referrer-Policy':'no-referrer'});
   head.writeHttpMetadata(h);h.set('Cache-Control','private, no-store');
   // Only an explicitly requested, declared MP4 video may play inline after authorization.
@@ -127,7 +129,7 @@ async function serveAsset(req,env,key){
   h.set('Content-Disposition',disposition);
   // Force a safe content type; uploaded HTML / SVG / scripts are never rendered inline.
   const types={pdf:'application/pdf',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',mp4:'video/mp4',jpg:'image/jpeg',png:'image/png',webp:'image/webp'};
-  h.set('Content-Type',types[key.split('.').pop()]||'application/octet-stream');
+  h.set('Content-Type',types[ext]||'application/octet-stream');
   if(req.method==='HEAD'){h.set('Content-Length',String(head.size));return new Response(null,{headers:h});}
   let options;
   if(range){const [,first,last]=range.match(/^bytes=(\d*)-(\d*)$/);if(!first&&!last)throw new HttpError(416,'Invalid file range.');if(!first){const len=Number(last);if(len<1)throw new HttpError(416,'Invalid file range.');options={range:{suffix:Math.min(len,head.size)}};}else{const start=Number(first),end=last?Math.min(Number(last),head.size-1):head.size-1;if(start>=head.size||end<start)throw new HttpError(416,'File range out of bounds.');options={range:{offset:start,length:end-start+1}};}}

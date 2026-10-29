@@ -15,3 +15,8 @@
   Content-Type: image/svg+xml; charset=utf-8
 /404.html
   X-Robots-Tag: noindex, nofollow
+
+/sample/*
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+  Cache-Control: no-store

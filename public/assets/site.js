@@ -220,9 +220,9 @@
     if(asset?.available&&asset.kind==='VIDEO'&&!asset.externalUrl&&/\.mp4$/i.test(asset.key)){
       const url='/api/asset/'+encodeURIComponent(asset.key);
       media=`<video class="learning-path-video" controls playsinline preload="none" aria-label="${esc(step.title)}"${poster?` poster="${poster}"`:''} src="${url}?play=1">Your browser cannot play this video. Use the download link below.</video>`;
-      download=`<a class="learning-path-download" href="${url}" data-private-file="${esc(asset.key)}" data-asset-label="${esc(asset.label || step.title)}" target="_blank" rel="noopener noreferrer">Download original <span aria-hidden="true">↗</span></a>`;
+      download=`<a class="learning-path-download" href="/sample/?file=${encodeURIComponent(asset.key)}&amp;label=${encodeURIComponent(asset.label || step.title)}&amp;download=1" target="_blank" rel="noopener noreferrer">Download original <span aria-hidden="true">↗</span></a>`;
     }else if(asset?.available){
-      media=`<div class="learning-path-empty"><p>Open this video to explore the next part of the learning experience.</p><a href="/api/asset/${encodeURIComponent(asset.key)}" data-private-file="${esc(asset.key)}" data-asset-label="${esc(asset.label || step.title)}" target="_blank" rel="noopener noreferrer">Watch video <span aria-hidden="true">↗</span></a></div>`;
+      media=`<div class="learning-path-empty"><p>Open this video to explore the next part of the learning experience.</p><a href="/sample/?file=${encodeURIComponent(asset.key)}&amp;label=${encodeURIComponent(asset.label || step.title)}" target="_blank" rel="noopener noreferrer">Watch video <span aria-hidden="true">↗</span></a></div>`;
     }else{
       media=`<div class="learning-path-empty"><p>This example is available by request.</p><a href="${esc(learningSampleRequest(p,step))}">Request this sample <span aria-hidden="true">↗</span></a></div>`;
     }
@@ -260,7 +260,10 @@
   }
   function privateAsset(a,p) {
     if(!a.available) return `<div class="case-file case-file-missing"><span class="case-file-icon" aria-hidden="true">?</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>Available by request</small></span><a class="case-file-action" href="mailto:goldinthecracksofficial@gmail.com?subject=${encodeURIComponent('Work sample request: '+p.title+' — '+a.label)}">Request ↗</a></div>`;
-    return `<a class="case-file case-file-download" href="${a.externalUrl?esc(a.externalUrl):`/api/asset/${encodeURIComponent(a.key)}`}" ${a.externalUrl?'':`data-private-file="${esc(a.key)}"`} data-asset-label="${esc(a.label)}" data-case-title="${esc(p.title)}" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">${a.kind==='VIDEO'?'▶':a.kind==='PRESENTATION'?'▤':'↗'}</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>${esc(a.kind)} · ${a.externalUrl?'YouTube video':'Protected file'}</small></span><span class="case-file-action">Open ↗</span></a>`;
+    const fileUrl=`/sample/?file=${encodeURIComponent(a.key)}&amp;label=${encodeURIComponent(a.label)}&amp;case=${encodeURIComponent(p.title)}`;
+    const destination=a.externalUrl?esc(a.externalUrl):fileUrl;
+    const action=a.kind==='PRESENTATION'?'Download':'Open';
+    return `<a class="case-file case-file-download" href="${destination}" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">${a.kind==='VIDEO'?'▶':a.kind==='PRESENTATION'?'▤':'↗'}</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>${esc(a.kind)} · ${a.externalUrl?'YouTube video':a.kind==='PRESENTATION'?'PowerPoint download':'Protected sample'}</small></span><span class="case-file-action">${action} ↗</span></a>`;
   }
   function renderPrivateCase(p) {
     return `<article class="case-study" id="case-${esc(p.id)}"><div class="case-study-heading"><p class="eyebrow red">Project ${esc(p.number)} / ${esc(p.category)}</p><h3>${esc(p.title)}</h3><p class="case-summary">${esc(p.summary)}</p></div><div class="case-study-columns"><div class="case-narrative"><div class="chips">${chips(p)}</div><div class="case-parts"><div><h4>The challenge</h4><p>${esc(p.challenge)}</p></div><div><h4>The idea & what I did</h4><p>${esc(p.approach)}</p></div><div><h4>The outcome</h4><p>${esc(p.impact)}</p></div></div><div class="case-outcome"><strong>${esc(p.outcome)}</strong><span>${esc(p.outcomeLabel)}</span></div></div><aside class="case-preview" aria-label="Work sample previews for ${esc(p.title)}"><div class="case-preview-top"><span>INSIDE THE WORK</span><span>${p.assets.length} SAMPLE${p.assets.length===1?'':'S'}</span></div>${privatePreviewVisual(p)}<div class="case-preview-files">${p.assets.map(a=>privateAsset(a,p)).join('')}</div><p class="case-preview-help" role="status" aria-live="polite" hidden></p></aside></div>${renderLearningPath(p)}</article>`;
@@ -329,27 +332,6 @@
       window.removeEventListener('resize',schedule);
     };
   }
-  function showFileError(el,message) {
-    const panel=el.closest('.case-preview') || el.closest('.learning-path');
-    const status=panel?.querySelector('.case-preview-help') || panel?.querySelector('.learning-path-status');
-    if(status){status.hidden=false;status.textContent=message;}
-    else toast(message);
-  }
-  // Check private files before navigating. A missing R2 object should never dump JSON in a browser tab.
-  async function openPrivateFile(anchor) {
-    const destination=anchor.href,windowRef=window.open('about:blank','_blank');
-    if(windowRef){windowRef.document.title='Checking work sample';windowRef.document.body.textContent='Checking the private work sample…';}
-    try {
-      const response=await fetch(destination,{method:'HEAD',credentials:'same-origin',cache:'no-store'});
-      if(!response.ok){let msg='';try{msg=(await response.json()).error||'';}catch{};throw Error(msg||'This file has not yet been uploaded to the private library.');}
-      if(windowRef){windowRef.location.replace(destination);}
-      else {window.location.assign(destination);}
-    }catch(err) {
-      if(windowRef)windowRef.close();
-      const label=anchor.dataset.assetLabel||'This sample';
-      showFileError(anchor,`${label} isn’t in private storage yet. Please request a copy from goldinthecracksofficial@gmail.com.`);
-    }
-  }
   async function loadPrivate() {
     const target=$('#private-content');if(!target)return;
     try {
@@ -416,7 +398,6 @@
       const card=target.closest('.work-project-card');const open=card.classList.toggle('is-preview');
       target.setAttribute('aria-expanded',String(open));target.innerHTML=open?'Hide preview <span aria-hidden="true">↑</span>':'Preview <span aria-hidden="true">↓</span>';return;
     }
-    if(target.hasAttribute('data-private-file')){e.preventDefault();openPrivateFile(target);return;}
     if(target.dataset.project){projectDialog(target.dataset.project);return;}
     if(target.dataset.openAccess){e.preventDefault();if(!target.closest('#project-dialog'))activeProject='';openAccess(target.dataset.openAccess);return;}
     if(target.dataset.tab){setTab(target.dataset.tab);return;}
