@@ -121,12 +121,27 @@ async function findDeclaredAsset(env,key){
 async function previewInfo(env,key){
   const a=await findDeclaredAsset(env,key);
   if(!/\.(pdf|pptx)$/.test(key)||Object.hasOwn(a,'externalUrl'))throw new HttpError(404,'This sample has no document preview.');
-  const manifest=await env.PRIVATE_ASSETS.get('previews/'+key+'.json');
-  if(!manifest)throw new HttpError(404,'The view-only preview has not been uploaded yet.');
-  const data=await manifest.json();
-  if(data?.key!==key||!Number.isInteger(data.pages)||data.pages<1||data.pages>500||data.format!=='webp')throw new HttpError(503,'The document preview is not configured correctly.');
-  return data;
+  const prefix='previews/'+key+'--';
+  // Prefer the supplied manifest, but remain usable when dashboard uploads
+  // omitted it or stored malformed JSON while uploading the actual pages.
+  let manifest=null;
+  try{
+    const object=await env.PRIVATE_ASSETS.get('previews/'+key+'.json');
+    if(object){
+      const data=await object.json();
+      if(data?.key===key&&Number.isInteger(data.pages)&&data.pages>=1&&data.pages<=500&&data.format==='webp')manifest=data;
+    }
+  }catch(err){console.warn('Portfolio preview manifest unreadable',key,err?.name||'Error');}
+  if(manifest)return manifest;
+  if(typeof env.PRIVATE_ASSETS.list!=='function')throw new HttpError(503,'Preview manifest unavailable.');
+  const listed=await env.PRIVATE_ASSETS.list({prefix,limit:600});
+  const ids=new Set((listed.objects||[]).map(o=>o.key.slice(prefix.length)).filter(n=>/^\d{4}\.webp$/.test(n)).map(n=>Number(n.slice(0,4))));
+  const pages=ids.size;
+  if(!pages||pages>500||listed.truncated)throw new HttpError(404,'Preview pages are missing in R2.');
+  for(let page=1;page<=pages;page++){if(!ids.has(page))throw new HttpError(503,'Preview pages are incomplete in R2.');}
+  return {key,pages,format:'webp'};
 }
+
 async function servePreview(req,env,key,what){
   const manifest=await previewInfo(env,key);
   if(what==='manifest'){
@@ -176,7 +191,7 @@ export async function onRequest(context){
   try {
     if(path==='config'&&req.method==='GET'){
       const status=accessStatus(env);
-      return json({ready:status.passwordReady,passwordReady:status.passwordReady,requestsReady:status.requestsReady,ownerReady:status.ownerReady,passwordEnabled:status.passwordEnabled,viewerVersion:'3.4',turnstileSiteKey:env.TURNSTILE_SITE_KEY||null,missing:status.missing});
+      return json({ready:status.passwordReady,passwordReady:status.passwordReady,requestsReady:status.requestsReady,ownerReady:status.ownerReady,passwordEnabled:status.passwordEnabled,viewerVersion:'3.5',turnstileSiteKey:env.TURNSTILE_SITE_KEY||null,missing:status.missing});
     }
     const requirement=path==='password-login'?'password':path==='admin/login'?'owner':(path==='request-access'||path==='login')?'requests':'storage';
     ensureReady(env,requirement);

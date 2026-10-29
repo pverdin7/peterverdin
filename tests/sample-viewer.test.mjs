@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 const source=readFileSync(new URL('../public/assets/sample.js',import.meta.url),'utf8');
-function fakeNode(){return {hidden:false,textContent:'',href:'',className:'',value:'',max:'',disabled:false,src:'',alt:'',replaceChildren(...children){this.children=children;},classList:{add(){}},addEventListener(){},setAttribute(){}};}
+function fakeNode(){return {hidden:false,textContent:'',href:'',className:'',value:'',max:'',disabled:false,src:'',alt:'',replaceChildren(...children){this.children=children;},classList:{add(){}},addEventListener(){},setAttribute(){},load(){}};}
 async function render(status,key='sample.pdf',pages=2){
  const elements=new Map();const el=id=>{if(!elements.has(id))elements.set(id,fakeNode());return elements.get(id);};
  const document={title:'Original',getElementById:el,createElement:tag=>({...fakeNode(),tagName:tag}),addEventListener(){}};
@@ -37,6 +37,7 @@ test('video plays inline without direct download actions',async()=>{
  assert.equal(r.get('sample-media').children[0].src,'/api/asset/video.mp4?play=1');
  assert.equal(r.get('sample-media').children[0].controls,true);
  assert.equal(r.get('sample-view').hidden,false);
+ assert.equal(r.calls.length,0,'video viewer should not block playback on a HEAD request');
 });
 test('invalid asset key does not access the API',async()=>{
  const r=await render(200,'../escape');assert.equal(r.calls.length,0);

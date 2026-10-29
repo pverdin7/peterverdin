@@ -16,7 +16,7 @@ function fixture(){
  const db=new D1(),sent=[],objects=new Map(),metadata=new Map();
  const network={emailStatus:200,challengeHostname:'example.com',challengeAction:null};
  objects.set('case-studies.json',JSON.stringify([{id:'test',challenge:'PRIVATE SENTINEL',assets:[{key:'sample.pdf',available:true}]}]));objects.set('files/sample.pdf','%PDF-TEST');
- const env={DB:db,PRIVATE_ASSETS:{async get(key,opts){if(!objects.has(key))return null;const value=objects.get(key);const b=new TextEncoder().encode(value);const range=opts?.range;let body=b,r;if(range){const off=range.offset??(b.length-range.suffix),len=range.length??range.suffix;r={offset:off,length:len};body=b.slice(off,off+len);}return {json:async()=>JSON.parse(value),body,size:b.length,range:r};},async head(key){if(!objects.has(key))return null;return {size:new TextEncoder().encode(objects.get(key)).length,writeHttpMetadata(headers){for(const [name,value] of Object.entries(metadata.get(key)||{}))headers.set(name,value);}};}},RESEND_API_KEY:'unit-test-not-a-real-key',EMAIL_FROM:'Test <access@example.com>',ADMIN_EMAIL:'owner@example.com',OWNER_PASSWORD:'owner-secret-with-more-than-twenty-characters',PORTFOLIO_PASSWORD:'visitor-secret-only-for-tests',SITE_ORIGIN:'https://example.com',TURNSTILE_SITE_KEY:'unit-test-key',TURNSTILE_SECRET_KEY:'unit-test-secret',RATE_LIMIT_SALT:'unit-test-long-salt-for-hashing-ip-identifiers'};
+ const env={DB:db,PRIVATE_ASSETS:{async get(key,opts){if(!objects.has(key))return null;const value=objects.get(key);const b=new TextEncoder().encode(value);const range=opts?.range;let body=b,r;if(range){const off=range.offset??(b.length-range.suffix),len=range.length??range.suffix;r={offset:off,length:len};body=b.slice(off,off+len);}return {json:async()=>JSON.parse(value),body,size:b.length,range:r};},async list({prefix='',limit=1000}={}){const keys=[...objects.keys()].filter(key=>key.startsWith(prefix)).slice(0,limit);return {objects:keys.map(key=>({key})),truncated:false};},async head(key){if(!objects.has(key))return null;return {size:new TextEncoder().encode(objects.get(key)).length,writeHttpMetadata(headers){for(const [name,value] of Object.entries(metadata.get(key)||{}))headers.set(name,value);}};}},RESEND_API_KEY:'unit-test-not-a-real-key',EMAIL_FROM:'Test <access@example.com>',ADMIN_EMAIL:'owner@example.com',OWNER_PASSWORD:'owner-secret-with-more-than-twenty-characters',PORTFOLIO_PASSWORD:'visitor-secret-only-for-tests',SITE_ORIGIN:'https://example.com',TURNSTILE_SITE_KEY:'unit-test-key',TURNSTILE_SECRET_KEY:'unit-test-secret',RATE_LIMIT_SALT:'unit-test-long-salt-for-hashing-ip-identifiers'};
  const oldFetch=globalThis.fetch;
  globalThis.fetch=async(url,opts)=>{
   const body=JSON.parse(opts.body);
@@ -66,7 +66,7 @@ test('inline playback is limited to declared MP4 videos and cannot inline docume
 
 test('unconfigured deployment fails closed',async()=>{
  const res=await onRequest({request:new Request('https://example.com/api/projects'),env:{}});assert.equal(res.status,503);assert.ok(!(await res.text()).includes('PRIVATE SENTINEL'));
- const cfg=await onRequest({request:new Request('https://example.com/api/config'),env:{}});const info=await cfg.json();assert.equal(info.ready,false);assert.equal(info.viewerVersion,'3.4');
+ const cfg=await onRequest({request:new Request('https://example.com/api/config'),env:{}});const info=await cfg.json();assert.equal(info.ready,false);assert.equal(info.viewerVersion,'3.5');
 });
 test('unauthorized visitors cannot read case studies or original files',async()=>{const f=fixture();try{
  assert.equal((await f.call('projects')).status,401);assert.equal((await f.call('asset/sample.pdf')).status,401);assert.equal((await f.call('asset/sample.pdf',undefined,{method:'HEAD'})).status,401);
@@ -176,6 +176,18 @@ test('original files redirect to view-only viewer for GET and deny HEAD/Range; p
  assert.equal((await f.call('asset/private%2Fsample.pdf',undefined,{cookie:visitor})).status,400);
  f.objects.set('case-studies.json',JSON.stringify([{id:'test',assets:[{key:'sample.pdf',available:false}]}]));assert.equal((await f.call('preview/sample.pdf/1',undefined,{cookie:visitor})).status,404);
  f.objects.delete('case-studies.json');assert.equal((await f.call('projects',undefined,{cookie:visitor})).status,503);
+}finally{f.close();}});
+
+test('preview page manifest fallback uses existing watermarked pages when JSON is missing or damaged',async()=>{const f=fixture();try{
+ const login=await f.call('password-login',{password:f.env.PORTFOLIO_PASSWORD,turnstileToken:'valid-password'}),visitor=cookieHeader(login);
+ f.objects.set('previews/sample.pdf--0001.webp','PAGE1');f.objects.set('previews/sample.pdf--0002.webp','PAGE2');
+ let response=await f.call('preview/sample.pdf/manifest',undefined,{cookie:visitor});assert.equal(response.status,200);assert.deepEqual(await response.json(),{pages:2,format:'webp'});
+ f.objects.set('previews/sample.pdf.json','{bad json');
+ response=await f.call('preview/sample.pdf/2',undefined,{cookie:visitor});assert.equal(response.status,200);assert.equal(await response.text(),'PAGE2');
+ f.objects.delete('previews/sample.pdf--0002.webp');
+ response=await f.call('preview/sample.pdf/manifest',undefined,{cookie:visitor});assert.equal(response.status,200);assert.equal((await response.json()).pages,1);
+ f.objects.delete('previews/sample.pdf--0001.webp');
+ response=await f.call('preview/sample.pdf/manifest',undefined,{cookie:visitor});assert.equal(response.status,404);
 }finally{f.close();}});
 
 test('hosted video URLs stay behind authorization for GET and HEAD',async()=>{const f=fixture();try{
@@ -311,5 +323,5 @@ test('PowerPoint viewer release includes Worker route and page-image viewer',()=
  assert.match(source,/status:302/);
  assert.match(source,/previewInfo\(env,key\)/);
  assert.match(worker,/onRequest/);
- assert.match(viewerHTML,/sample\.js\?v=20261029-sample34/);
+ assert.match(viewerHTML,/sample\.js\?v=20261029-sample35/);
 });
