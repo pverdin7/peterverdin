@@ -167,7 +167,7 @@
     if(!privateCases.length)await loadPrivate();
     const selected=document.getElementById('case-'+id);
     if(selected)selected.scrollIntoView({behavior:scrollBehavior(),block:'start'});
-    else toast('This case study is not available yet. Please email goldinthecracksofficial@gmail.com for a copy.');
+    else toast('This case study is not available yet. Please email drpete@peterverdin.com for a copy.');
   }
   function setTab(name) {
     $$('[data-tab]').forEach(el=>{const on=el.dataset.tab===name;el.setAttribute('aria-selected',String(on));el.tabIndex=on?0:-1;});
@@ -222,9 +222,9 @@
       const isPassword=endpoint==='password-login';
       const available=isPassword?config.passwordReady:config.requestsReady;
       if(!available){
-        if(config.connectionError)throw new Error('The access API has not been deployed at this address. The portfolio code cannot be checked yet. Please email goldinthecracksofficial@gmail.com.');
+        if(config.connectionError)throw new Error('The access API has not been deployed at this address. The portfolio code cannot be checked yet. Please email drpete@peterverdin.com.');
         const missing=Array.isArray(config.missing)&&config.missing.length?' Missing: '+config.missing.join(', ')+'.':'';
-        throw new Error('Private access requires Cloudflare configuration.'+missing+' Please email goldinthecracksofficial@gmail.com.');
+        throw new Error('Private access requires Cloudflare configuration.'+missing+' Please email drpete@peterverdin.com.');
       }
       const result=await api(endpoint,data);await success(result);
     } catch(err) {status.textContent=err.message;}
@@ -250,7 +250,7 @@
     return typeof step.poster==='string'&&/^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(step.poster)&&!/\s/.test(step.poster)?step.poster:'';
   }
   function learningSampleRequest(p,step) {
-    return 'mailto:goldinthecracksofficial@gmail.com?subject='+encodeURIComponent('Work sample request: '+p.title+' — '+(step.asset?.label||step.title));
+    return 'mailto:drpete@peterverdin.com?subject='+encodeURIComponent('Work sample request: '+p.title+' — '+(step.asset?.label||step.title));
   }
   function learningStepPanel(p,steps,index) {
     const step=steps[index],asset=step.asset,poster=learningPathPoster(step);
@@ -296,7 +296,7 @@
     return `<div class="case-preview-graphic"><span>PROJECT ${esc(p.number)} / ${esc(p.category.toUpperCase())}</span><strong>${esc(p.outcome)}</strong><p>${esc(p.outcomeLabel)}</p><span class="case-preview-graphic-line" aria-hidden="true"></span></div>`;
   }
   function privateAsset(a,p) {
-    if(!a.available) return `<div class="case-file case-file-missing"><span class="case-file-icon" aria-hidden="true">?</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>Available by request</small></span><a class="case-file-action" href="mailto:goldinthecracksofficial@gmail.com?subject=${encodeURIComponent('Work sample request: '+p.title+' — '+a.label)}">Request ↗</a></div>`;
+    if(!a.available) return `<div class="case-file case-file-missing"><span class="case-file-icon" aria-hidden="true">?</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>Available by request</small></span><a class="case-file-action" href="mailto:drpete@peterverdin.com?subject=${encodeURIComponent('Work sample request: '+p.title+' — '+a.label)}">Request ↗</a></div>`;
     const isSlides=/\.pptx$/i.test(a.key);
     const isDocument=isSlides||/\.pdf$/i.test(a.key);
     const fileUrl=`/sample/?file=${encodeURIComponent(a.key)}&amp;label=${encodeURIComponent(a.label)}&amp;case=${encodeURIComponent(p.title)}`;
@@ -391,7 +391,7 @@
       $('#access-gate').hidden=true;target.hidden=false;
       disposeCaseIndex();
       const unavailable=err.message.toLowerCase().includes('not been uploaded')||err.message.toLowerCase().includes('not ready');
-      target.innerHTML=`<div class="case-library-error" role="alert"><h2>Access confirmed. Case-study library unavailable.</h2><p>${unavailable?'The private case-study index has not been added to Cloudflare R2. Upload case-studies.json to the root of the private bucket.':'The private library could not load. Please try again or contact Peter for the sample.'}</p><a href="mailto:goldinthecracksofficial@gmail.com?subject=Portfolio%20case%20study%20request">Request a work sample ↗</a></div>`;
+      target.innerHTML=`<div class="case-library-error" role="alert"><h2>Access confirmed. Case-study library unavailable.</h2><p>${unavailable?'The private case-study index has not been added to Cloudflare R2. Upload case-studies.json to the root of the private bucket.':'The private library could not load. Please try again or contact Peter for the sample.'}</p><a href="mailto:drpete@peterverdin.com?subject=Portfolio%20case%20study%20request">Request a work sample ↗</a></div>`;
     }
   }
   async function loadAdmin() {
@@ -414,7 +414,7 @@
     await sessionReady;
     if(navigation===projectNavigation&&projectIdFromHash()===id)projectDialog(id);
   }
-  const fallbackEmail='goldinthecracksofficial@gmail.com';
+  const fallbackEmail='drpete@peterverdin.com';
   let contactReturnFocus=null;
   function ensureContactDialog() {
     let dialog=$('#pv-contact-dialog');if(dialog)return dialog;
@@ -431,7 +431,7 @@
         <input id="pv-contact-email" class="pv-contact-email" type="text" value="${fallbackEmail}" readonly spellcheck="false" aria-label="Email address to copy">
         <div class="pv-contact-actions">
           <button type="button" class="btn pv-contact-copy" data-contact-copy>Copy email address ↗︎</button>
-          <a class="btn outline pv-contact-launch" id="pv-contact-launch" data-pv-mailto-direct href="mailto:goldinthecracksofficial@gmail.com">Open email app ↗︎</a>
+          <a class="btn outline pv-contact-launch" id="pv-contact-launch" data-pv-mailto-direct href="mailto:drpete@peterverdin.com">Open email app ↗︎</a>
         </div>
         <p class="pv-contact-status" id="pv-contact-status" role="status" aria-live="polite">Copy the address if your browser doesn't have an email app configured.</p>
       </div>`;
@@ -444,7 +444,7 @@
     return dialog;
   }
   function openContactDialog(link){
-    const href=link.getAttribute('href') || 'mailto:goldinthecracksofficial@gmail.com';
+    const href=link.getAttribute('href') || 'mailto:drpete@peterverdin.com';
     const address=decodeURIComponent(href.slice(7).split('?')[0]) || fallbackEmail;
     const dialog=ensureContactDialog();
     contactReturnFocus=link;
@@ -539,7 +539,13 @@
   });
   window.addEventListener('hashchange',openProjectFromHash);
   document.addEventListener('keydown',e=>{if(e.target.matches('[data-tab][role=tab]')&&['ArrowRight','ArrowLeft'].includes(e.key)){e.preventDefault();const name=e.target.dataset.tab==='request'?'login':'request';setTab(name);$(`#${name}-tab`).focus();}});
-  window.PV={mount,visual,card};
+  // A related-work link should open the FULL case study, not a public project card.
+  // Wait for the existing session check so approved visitors skip the access prompt.
+  async function openCaseStudyDirect(id) {
+    await sessionReady;
+    return projectDialog(id);
+  }
+  window.PV={mount,visual,card,openCaseStudy:openCaseStudyDirect};
   mount();
 })();
 

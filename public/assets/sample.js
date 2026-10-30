@@ -9,7 +9,7 @@
   $('sample-title').textContent=label;
   document.title=label+' | Peter Verdin';
   if(context){$('sample-case').hidden=false;$('sample-case').textContent=context;}
-  const address='goldinthecracksofficial@gmail.com';
+  const address='drpete@peterverdin.com';
   $('sample-email').href='mailto:'+address+'?subject='+encodeURIComponent('Portfolio sample request: '+label);
   function fail(title,message,unauthorized=false){
     $('sample-status').hidden=true;
