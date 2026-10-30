@@ -30,6 +30,285 @@
 <script src="/assets/experience.js" defer></script>
 <script src="/assets/experience-init.js" defer></script>
 <script src="/assets/navigation.js" defer></script>
+<!-- Readability: accessible-sized editorial labels on desktop and mobile. -->
+<style id="typography-readability-20261029">
+/* ============================================================
+   PETER VERDIN — RESPONSIVE TYPOGRAPHY READABILITY PASS
+   2026-10-29
+   Small editorial labels are real content, not fine print.
+   Purposefully limited to type, contrast, and necessary spacing.
+   ============================================================ */
+
+/* Shared tokens keep type readable without flattening hierarchy. */
+:root {
+  --pv-editorial-label: 15px;
+  --pv-editorial-caption: 14px;
+  --pv-editorial-body: 17px;
+  --pv-editorial-ink: #504b46;
+  --pv-editorial-muted: #625c56;
+}
+
+/* Header and top-of-page support text. */
+.identity-sub,
+.story-hero-kicker,
+.story-hero-bottom > span,
+.story-hero-bottom > a {
+  font-size: 13px !important;
+  line-height: 1.55 !important;
+  letter-spacing: .055em;
+}
+.identity-sub,
+.story-hero-bottom > span,
+.story-hero-bottom > a {
+  color: #d8d1c9 !important;
+}
+.primary-nav-hint {
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+}
+.nav-cta { font-size: 14px !important; }
+.story-entry-copy small { font-size: 15px !important; line-height: 1.5 !important; }
+.hero-work-sample > span:not([aria-hidden]) { font-size: 14px !important; }
+.story-nav-label { font-size: 15px !important; }
+.story-chapter-nav a small { font-size: 13px !important; }
+
+/* All substantive eyebrow labels on the story page. */
+.story-root .story-eyebrow,
+.story-root .publishing-eyebrow,
+.story-root .publishing-role,
+.story-root .story-stage-top,
+.story-root .story-stage-bottom > small,
+.story-root .story-mobile-art figcaption,
+.story-root .story-turn > span,
+.story-root .story-project-link,
+.story-root .publishing-link {
+  font-size: var(--pv-editorial-label) !important;
+  line-height: 1.45 !important;
+  letter-spacing: .035em;
+}
+.story-root .story-eyebrow,
+.story-root .publishing-eyebrow,
+.story-root .publishing-role,
+.story-root .story-turn > span,
+.story-root .story-mobile-art figcaption {
+  color: var(--pv-editorial-ink) !important;
+}
+/* Preserve red section numbers and arrow accents. */
+.story-root .story-eyebrow > span { color: #db3026; }
+
+/* The connecting thread: make the editorial progression legible. */
+.story-perspective-line,
+.story-perspective-line > span,
+.story-brand-thread,
+.story-brand-thread > span {
+  font-size: 15px !important;
+  line-height: 1.6 !important;
+  letter-spacing: .02em;
+}
+.story-perspective-line > span,
+.story-brand-thread > span { color: var(--pv-editorial-ink) !important; }
+.story-journey-heading > p:not(.story-eyebrow) {
+  font-size: 15px !important;
+  line-height: 1.55 !important;
+  color: var(--pv-editorial-muted) !important;
+}
+
+/* Slide artwork and caption text: tighten tracking rather than
+   squeezing the text into 7–9px type. */
+.story-stage-top { min-height: 26px; gap: 10px; }
+.story-stage-sheet > span,
+.story-stage-sheet > small,
+.story-stage-inset > span,
+.story-stage-frames figcaption,
+.story-stage-frames figcaption span,
+.story-stage-bottom > small,
+.story-platform-words > span {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+  letter-spacing: .015em;
+}
+.story-stage-sheet > small,
+.story-stage-sheet > span,
+.story-stage-inset > span,
+.story-stage-frames figcaption span,
+.story-stage-bottom > small {
+  overflow-wrap: break-word;
+}
+.story-stage-sheet > small { max-width: 76%; }
+.story-stage-sheet > span,
+.story-stage-sheet > small,
+.story-stage-frames figcaption,
+.story-stage-top,
+.story-stage-bottom > small {
+  color: var(--pv-editorial-ink) !important;
+}
+/* The callout badge is physically narrow; make its text a readable
+   12px and keep its existing contrasting foreground color. */
+.story-stage-number small {
+  font-size: 12px !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0;
+}
+
+/* Two-column challenge / contribution blocks. Give labels a real
+   column on desktop; stack on small screens below. */
+.story-turn {
+  grid-template-columns: minmax(125px, 27%) minmax(0, 1fr) !important;
+  column-gap: 16px;
+  row-gap: 8px;
+}
+.story-turn > span {
+  min-width: 0;
+  overflow-wrap: normal;
+  letter-spacing: .01em !important;
+}
+.story-turn > p {
+  font-size: var(--pv-editorial-body) !important;
+  line-height: 1.58 !important;
+  color: var(--pv-editorial-ink) !important;
+  min-width: 0;
+}
+
+/* Metrics: allow multi-line captions so 448 / 150 / 153 stay distinct. */
+.story-contributions > div { min-width: 0; }
+.story-contributions > div > span {
+  display: block;
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+  letter-spacing: .015em;
+  color: var(--pv-editorial-ink) !important;
+  overflow-wrap: anywhere;
+}
+
+/* Links, project controls, bridge notes and publishing section. */
+.story-project-link,
+.publishing-link { letter-spacing: .03em !important; }
+.story-detail summary,
+.publishing-thinking summary,
+.story-quiet-link,
+.story-more > a,
+.story-actions .story-button {
+  font-size: 15px !important;
+  line-height: 1.55 !important;
+}
+.story-bridge,
+.story-bridge strong,
+.publishing-description,
+.publishing-intro,
+.publishing-thinking-copy p {
+  font-size: 16px !important;
+  line-height: 1.65 !important;
+}
+.story-bridge { color: var(--pv-editorial-muted) !important; }
+.story-bridge strong { color: #282625 !important; }
+
+/* Evidence and final call-to-action support text. */
+.story-evidence-tabs button > span,
+.story-fit-principles > div > span,
+.story-more .story-eyebrow {
+  font-size: 14px !important;
+  line-height: 1.45 !important;
+}
+.story-panel-takeaway,
+.story-fit-principles p,
+.story-more > div > p:not(.story-eyebrow) {
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+}
+
+/* Consistent shared footer / dialog microcopy. */
+.site-footer .eyebrow,
+.footer-bottom,
+.footer-bottom a,
+.access-dialog-v2 .eyebrow,
+.form-fine {
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+}
+.footer-links a { font-size: 16px !important; line-height: 1.5 !important; }
+
+@media (max-width: 900px) {
+  :root {
+    --pv-editorial-label: 14px;
+    --pv-editorial-caption: 14px;
+    --pv-editorial-body: 17px;
+  }
+  .story-turn {
+    grid-template-columns: minmax(125px, 28%) minmax(0, 1fr) !important;
+    column-gap: 18px;
+  }
+  .story-root .story-eyebrow,
+  .story-root .story-turn > span { letter-spacing: .015em; }
+}
+
+@media (max-width: 650px) {
+  .identity-sub {
+    font-size: 12px !important;
+    letter-spacing: .02em;
+  }
+  .story-hero-kicker,
+  .story-hero-bottom > span,
+  .story-hero-bottom > a {
+    font-size: 12.5px !important;
+    letter-spacing: .025em;
+  }
+  .primary-nav-hint { font-size: 13px !important; }
+  .story-entry-copy small { font-size: 14px !important; }
+  .story-nav-label { font-size: 14px !important; }
+  .story-chapter-nav a small { font-size: 12px !important; }
+
+  .story-turn {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+  .story-turn > span {
+    display: block !important;
+    margin-bottom: 8px !important;
+  }
+  .story-turn > p {
+    margin-top: 0 !important;
+    font-size: 17px !important;
+    line-height: 1.6 !important;
+  }
+  .story-perspective-line,
+  .story-brand-thread {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+  }
+  .story-perspective-line > span,
+  .story-brand-thread > span { font-size: 14px !important; }
+  .story-journey-heading > p:not(.story-eyebrow) { font-size: 14px !important; }
+  .story-root .story-mobile-art figcaption {
+    font-size: 14px !important;
+    line-height: 1.5 !important;
+  }
+  .story-contributions > div > span {
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+  }
+  .story-project-link, .publishing-link { font-size: 14px !important; }
+  .story-bridge, .story-bridge strong { font-size: 15px !important; }
+  .story-detail summary,
+  .publishing-thinking summary,
+  .story-quiet-link,
+  .story-more > a { font-size: 14px !important; }
+  .story-stage-sheet > span,
+  .story-stage-sheet > small,
+  .story-stage-frames figcaption span,
+  .story-stage-bottom > small { font-size: 12px !important; }
+  .site-footer .eyebrow,
+  .footer-bottom,
+  .footer-bottom a { font-size: 13px !important; }
+}
+
+@media (max-width: 375px) {
+  .story-contributions > div > span { font-size: 12px !important; }
+  .identity-sub { font-size: 11.5px !important; }
+}
+
+</style>
 </head>
 <body class="agency story-route" data-page="/">
 <a class="skip" href="#main">Skip to content</a><header class="site-header"><div class="container header-inner"><a aria-label="Peter Verdin home" class="identity" href="/"><span aria-hidden="true" class="monogram"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 64" fill="none" aria-hidden="true" focusable="false">
