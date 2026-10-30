@@ -7,6 +7,14 @@
   const projects = window.PROJECTS || [];
   const imageNames = new Set(['nnu','book','curriculum','facility','playground','movement']);
   const imagePath = name => '/assets/img/' + name + (name === 'book' ? '.svg' : '.webp');
+  // Dedicated case-study links from the résumé use ?case=<project-id>.
+  // Unlike #preview-* anchors, this route never targets a public project card.
+  const caseFromQuery = () => {
+    if (document.body.dataset.page !== '/my-work/') return '';
+    const value = new URLSearchParams(window.location.search).get('case') || '';
+    return projects.some(project => project.id === value) ? value : '';
+  };
+  const directCaseId = caseFromQuery();
   const selectedCategories = new Set();
   let activeProject = '', config = {}, authenticated = false, adminAuthenticated = false;
   let pendingConfig = null, widgets = new Map(), privateCases = [], toastTimer;
@@ -467,7 +475,45 @@
     }
   }
 
+  function mountDirectCase() {
+    if (!directCaseId) return;
+    document.body.classList.add('pv-direct-case-route');
+    if (!document.getElementById('pv-direct-case-css')) {
+      const style=document.createElement('style');
+      style.id='pv-direct-case-css';
+      style.textContent=`
+        body.pv-direct-case-route .experience-intro,
+        body.pv-direct-case-route .experience-viewbar,
+        body.pv-direct-case-route .filter-bar,
+        body.pv-direct-case-route .grid-status,
+        body.pv-direct-case-route #all-projects { display: none !important; }
+        body.pv-direct-case-route .work-section { padding-top: clamp(26px, 5vw, 60px); }
+        .pv-direct-case-banner { margin-bottom: 28px; border-bottom: 1px solid #cfc7bc; padding: 0 0 24px; }
+        .pv-direct-case-banner-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+        .pv-direct-case-kicker { font: 700 13px/1.5 monospace; letter-spacing: .09em; color: #b9332b; }
+        .pv-direct-case-back { font: 700 14px/1.5 system-ui,sans-serif; text-decoration: none; color: #252321; border-bottom: 1px solid currentColor; }
+        .pv-direct-case-banner h1 { font: 800 clamp(28px, 4vw, 46px)/1.13 system-ui,sans-serif; color: #211e1c; margin: 19px 0 8px; }
+        .pv-direct-case-banner p { max-width: 62ch; font-size: clamp(16px, 1.5vw, 19px); line-height: 1.6; color: #57534e; margin: 0; }
+        body.pv-direct-case-route .case-study { scroll-margin-top: 110px; }
+        @media (max-width: 680px) { .pv-direct-case-banner { margin-bottom: 18px; } }
+      `;
+      document.head.append(style);
+    }
+    const project=projects.find(p=>p.id===directCaseId);
+    const container=document.querySelector('#experience-projects .work-section');
+    const library=document.getElementById('private-library');
+    if (!project || !container || !library || document.getElementById('pv-direct-case-banner')) return;
+    const banner=document.createElement('div');
+    banner.id='pv-direct-case-banner';
+    banner.className='pv-direct-case-banner';
+    banner.innerHTML='<div class="pv-direct-case-banner-row"><span class="pv-direct-case-kicker">PORTFOLIO / FULL CASE STUDY</span><a class="pv-direct-case-back" href="/my-work/">← ALL PROJECTS</a></div><h1></h1><p></p>';
+    banner.querySelector('h1').textContent=project.title;
+    banner.querySelector('p').textContent=project.summary;
+    container.insertBefore(banner,library);
+  }
+
   function mount() {
+    mountDirectCase();
     selectedCategories.clear();widgets.clear();document.body.classList.remove('modal-open');
     $$('[data-year]').forEach(e=>e.textContent=new Date().getFullYear());
     $$('[data-featured]').forEach(el=>el.innerHTML=el.dataset.featured.split(',').map(id=>projects.find(p=>p.id===id)).filter(Boolean).map(card).join(''));
@@ -496,7 +542,13 @@
     });
     getConfig().then(()=>{if($('#admin-login-form'))renderTurnstile();});
     loadAdmin();
-    sessionReady=loadSession();openProjectFromHash();
+    sessionReady=loadSession();
+    openProjectFromHash();
+    if (directCaseId) {
+      // Only enter the full case study once session and the private index are ready.
+      // Unauthorized visitors get the selected case's access dialog instead.
+      void sessionReady.then(() => projectDialog(directCaseId));
+    }
   }
   document.addEventListener('click',async e=>{
     const target=e.target.closest('button,a,dialog');if(!target)return;
