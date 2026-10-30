@@ -32,6 +32,7 @@
   const workPreviewMap = {
     'strategy-client-solutions': {image:'slow-coffee', alt:'Slow by Slow market intelligence presentation cover', caption:'SLOW BY SLOW / MARKET INTELLIGENCE', materials:['Audience research','Proposal pitches','Campaign concept']},
     'author-brand': {image:'book', alt:'Gold in the Cracks book rendering', caption:'GOLD IN THE CRACKS / EXIT DOOR PRESS', materials:['Book & publishing identities','Website, logo & speaker materials']},
+    'portfolio-website': {materials:['Creative direction & UX','AI-assisted development & QA','Cloudflare & GitHub deployment'], kind:'LIVE DIGITAL PRODUCT'},
     'district-onboarding': {materials:['K–6 onboarding lesson','8–12 onboarding lesson'], kind:'SLIDE DECKS'},
     'mtss-data-dives': {materials:['Guided district data dive','Introduction video'], kind:'GUIDED DATA REVIEW'},
     'professional-services': {materials:['Tailored professional-services plan','Implementation & coaching support'], kind:'SERVICE PLANNING'},
@@ -67,6 +68,24 @@
     'professional-development': {label:'RELATED EXPERIENCE',roles:[['Athlos Academies','Associate Director of Healthy Body','career-athlos-director'],['Athlos Academies','Product Manager // Coach Education Manager','career-athlos-product']]},
     'playground-design': {label:'RELATED EXPERIENCE',roles:[['Athlos Academies','Associate Director of Healthy Body','career-athlos-director'],['Athlos Academies','Product Manager // Coach Education Manager','career-athlos-product']]}
   };
+
+  // Live, local filtering of the existing cards; nothing is submitted or sent to a server.
+  const normalizeFilter = value => String(value ?? '')
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9+]+/g, ' ').trim();
+  const filterAliases = {
+    'portfolio-website': 'peterverdin.com website web development github artificial intelligence ai cloudflare personal portfolio 24 hours',
+    'strategy-client-solutions': 'kivi idaho news 6 advertising sales big game new business media consulting',
+    'learning-management-system': 'healthy body university microcredentials learning management system',
+    'skateboarding-program': 'skateboarding skateboard after school club video',
+    'webinar-delivery': 'bulgarian sports coaching webinar international webinar'
+  };
+  function projectFilterText(p) {
+    return normalizeFilter([
+      p.title, p.summary, p.eyebrow, p.outcome, p.outcomeLabel, p.category,
+      ...(p.skills || []), workRoleSearchText(p), p.id.replace(/-/g, ' '), filterAliases[p.id] || ''
+    ].join(' '));
+  }
 
   function workRoleSearchText(p) {
     const item=workRoleMap[p.id];
@@ -105,11 +124,19 @@
 
   function renderProjects() {
     const grid=$('#all-projects'); if(!grid) return;
-    const visible=projects.filter(p=>(filter==='all'||p.category===filter)&&`${p.title} ${p.summary} ${p.skills.join(' ')} ${p.category} ${workRoleSearchText(p)}`.toLowerCase().includes(search));
-    const shown = visible;
-    grid.innerHTML=visible.length ? shown.map(card).join('') : '<p class="no-results">No projects match that search. Try another skill or choose “All work.”</p>';
-    $('#project-count').textContent=`${shown.length<visible.length?`${shown.length} of `:''}${visible.length} project${visible.length===1?'':'s'}${filter==='all'?'':` · ${filter}`}`;
-    
+    const terms=normalizeFilter(search).split(' ').filter(Boolean);
+    const visible=projects.filter(p=>(filter==='all'||p.category===filter)
+      &&terms.every(term=>projectFilterText(p).includes(term)));
+    grid.innerHTML=visible.length
+      ? visible.map(card).join('')
+      : '<div class="no-results" role="status"><strong>No matching projects.</strong><p>Try another keyword or clear the filters to see all the work.</p><button type="button" class="filter-reset-btn" data-filter-reset>Show all projects ↗︎</button></div>';
+    const narrowed=terms.length>0||filter!=='all';
+    const suffix=filter==='all'?'':` · ${filter}`;
+    $('#project-count').textContent=narrowed
+      ? `${visible.length} of ${projects.length} projects${suffix}`
+      : `${projects.length} projects`;
+    const clear=$('#project-filter-clear');
+    if(clear)clear.hidden=!terms.length;
   }
   function toast(message) {
     const el=$('#toast'); if(!el)return; clearTimeout(toastTimer); el.textContent=message;el.hidden=false;
@@ -270,7 +297,11 @@
     return `<a class="case-file case-file-view" href="${destination}" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">${a.kind==='VIDEO'?'▶':isSlides?'▤':'↗'}</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>${descriptor}</small></span><span class="case-file-action">${action} ↗</span></a>`;
   }
   function renderPrivateCase(p) {
-    return `<article class="case-study" id="case-${esc(p.id)}"><div class="case-study-heading"><p class="eyebrow red">Project ${esc(p.number)} / ${esc(p.category)}</p><h3>${esc(p.title)}</h3><p class="case-summary">${esc(p.summary)}</p></div><div class="case-study-columns"><div class="case-narrative"><div class="chips">${chips(p)}</div><div class="case-parts"><div><h4>The challenge</h4><p>${esc(p.challenge)}</p></div><div><h4>The idea & what I did</h4><p>${esc(p.approach)}</p></div><div><h4>The outcome</h4><p>${esc(p.impact)}</p></div></div><div class="case-outcome"><strong>${esc(p.outcome)}</strong><span>${esc(p.outcomeLabel)}</span></div></div><aside class="case-preview" aria-label="Work sample previews for ${esc(p.title)}"><div class="case-preview-top"><span>INSIDE THE WORK</span><span>${p.assets.length} SAMPLE${p.assets.length===1?'':'S'}</span></div>${privatePreviewVisual(p)}<div class="case-preview-files">${p.assets.map(a=>privateAsset(a,p)).join('')}</div><p class="case-preview-help" role="status" aria-live="polite" hidden></p></aside></div>${renderLearningPath(p)}</article>`;
+    const livePortfolio = p.id === 'portfolio-website';
+    const sampleArea = livePortfolio
+      ? `<aside class="case-preview" aria-label="Explore live website"><div class="case-preview-top"><span>LIVE RESULT</span><span>PUBLIC WEBSITE</span></div>${privatePreviewVisual(p)}<div class="case-preview-files"><a class="case-file case-file-view" href="https://peterverdin.com/" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">↗</span><span class="case-file-info"><strong>Visit the live portfolio</strong><small>RESPONSIVE WEBSITE · OPEN IN NEW TAB</small></span><span class="case-file-action">Explore ↗</span></a></div></aside>`
+      : `<aside class="case-preview" aria-label="Work sample previews for ${esc(p.title)}"><div class="case-preview-top"><span>INSIDE THE WORK</span><span>${p.assets.length} SAMPLE${p.assets.length===1?'':'S'}</span></div>${privatePreviewVisual(p)}<div class="case-preview-files">${p.assets.map(a=>privateAsset(a,p)).join('')}</div><p class="case-preview-help" role="status" aria-live="polite" hidden></p></aside>`;
+    return `<article class="case-study" id="case-${esc(p.id)}"><div class="case-study-heading"><p class="eyebrow red">Project ${esc(p.number)} / ${esc(p.category)}</p><h3>${esc(p.title)}</h3><p class="case-summary">${esc(p.summary)}</p></div><div class="case-study-columns"><div class="case-narrative"><div class="chips">${chips(p)}</div><div class="case-parts"><div><h4>The challenge</h4><p>${esc(p.challenge)}</p></div><div><h4>The idea & what I did</h4><p>${esc(p.approach)}</p></div><div><h4>The outcome</h4><p>${esc(p.impact)}</p></div></div><div class="case-outcome"><strong>${esc(p.outcome)}</strong><span>${esc(p.outcomeLabel)}</span></div></div>${sampleArea}</div>${renderLearningPath(p)}</article>`;
   }
   /* A visual table of contents for the authorized work: one tap to jump,
      with a live reading indicator and keyboard-accessible project links. */
@@ -372,13 +403,74 @@
     await sessionReady;
     if(navigation===projectNavigation&&projectIdFromHash()===id)projectDialog(id);
   }
+  const fallbackEmail='goldinthecracksofficial@gmail.com';
+  let contactReturnFocus=null;
+  function ensureContactDialog() {
+    let dialog=$('#pv-contact-dialog');if(dialog)return dialog;
+    dialog=document.createElement('dialog');
+    dialog.id='pv-contact-dialog';
+    dialog.className='dialog pv-contact-dialog';
+    dialog.setAttribute('aria-labelledby','pv-contact-title');
+    dialog.innerHTML=`<button type="button" class="dialog-close" data-close aria-label="Close contact panel">×</button>
+      <div class="dialog-inner">
+        <p class="eyebrow red">A GOOD PLACE TO START</p>
+        <h2 id="pv-contact-title">LET’S TALK.</h2>
+        <p class="intro">Have an idea, an opportunity, or a question? Reach out directly.</p>
+        <label class="pv-contact-field" for="pv-contact-email">EMAIL ADDRESS</label>
+        <input id="pv-contact-email" class="pv-contact-email" type="text" value="${fallbackEmail}" readonly spellcheck="false" aria-label="Email address to copy">
+        <div class="pv-contact-actions">
+          <button type="button" class="btn pv-contact-copy" data-contact-copy>Copy email address ↗︎</button>
+          <a class="btn outline pv-contact-launch" id="pv-contact-launch" data-pv-mailto-direct href="mailto:goldinthecracksofficial@gmail.com">Open email app ↗︎</a>
+        </div>
+        <p class="pv-contact-status" id="pv-contact-status" role="status" aria-live="polite">Copy the address if your browser doesn't have an email app configured.</p>
+      </div>`;
+    dialog.addEventListener('close',()=>{
+      document.body.classList.remove('modal-open');
+      if(contactReturnFocus?.isConnected)contactReturnFocus.focus({preventScroll:true});
+      contactReturnFocus=null;
+    });
+    document.body.appendChild(dialog);
+    return dialog;
+  }
+  function openContactDialog(link){
+    const href=link.getAttribute('href') || 'mailto:goldinthecracksofficial@gmail.com';
+    const address=decodeURIComponent(href.slice(7).split('?')[0]) || fallbackEmail;
+    const dialog=ensureContactDialog();
+    contactReturnFocus=link;
+    $('#pv-contact-email',dialog).value=address;
+    $('#pv-contact-launch',dialog).href=href;
+    $('#pv-contact-status',dialog).textContent='Copy the address if your browser doesn\'t have an email app configured.';
+    openDialog('#pv-contact-dialog');
+    $('[data-contact-copy]',dialog)?.focus({preventScroll:true});
+  }
+  async function copyContactEmail(){
+    const input=$('#pv-contact-email'),status=$('#pv-contact-status');
+    if(!input||!status)return;
+    try {
+      if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(input.value);}
+      else {input.focus();input.select();if(!document.execCommand('copy'))throw new Error('Copy unavailable');}
+      status.textContent='Email address copied. Paste it into your preferred email service.';
+    }catch(err){
+      input.focus();input.select();
+      status.textContent='The address is selected. Copy it manually and paste it into your email service.';
+    }
+  }
+
   function mount() {
     filter='all';search='';widgets.clear();document.body.classList.remove('modal-open');
     $$('[data-year]').forEach(e=>e.textContent=new Date().getFullYear());
     $$('[data-featured]').forEach(el=>el.innerHTML=el.dataset.featured.split(',').map(id=>projects.find(p=>p.id===id)).filter(Boolean).map(card).join(''));
     renderProjects();
     $$('dialog').forEach(el=>el.addEventListener('close',()=>document.body.classList.remove('modal-open')));
-    $('#project-search')?.addEventListener('input',e=>{search=e.target.value.trim().toLowerCase();renderProjects();});
+    const projectFilterInput=$('#project-search');
+    if(projectFilterInput){
+      const syncFilter=()=>{search=projectFilterInput.value;renderProjects();};
+      projectFilterInput.addEventListener('input',syncFilter);
+      projectFilterInput.addEventListener('search',syncFilter); // includes native search-field clear on Safari
+      projectFilterInput.addEventListener('keydown',event=>{
+        if(event.key==='Escape'&&projectFilterInput.value){event.preventDefault();projectFilterInput.value='';syncFilter();}
+      });
+    }
     $('#request-form')?.addEventListener('submit',e=>{e.preventDefault();submitForm(e.currentTarget,'request-access',result=>{$('.form-status',e.target).textContent=result.message;e.target.reset();});});
     $('#password-form')?.addEventListener('submit',e=>{e.preventDefault();submitForm(e.currentTarget,'password-login',authenticateAndOpen);});
     $('#email-login-form')?.addEventListener('submit',e=>{e.preventDefault();submitForm(e.currentTarget,'login',result=>{$('.form-status',e.target).textContent=result.message;});});
@@ -394,9 +486,23 @@
   document.addEventListener('click',async e=>{
     const target=e.target.closest('button,a,dialog');if(!target)return;
     if(target.hasAttribute('data-learning-step')){selectLearningStep(target);return;}
+    // A mailto link may do nothing on desktop; show the address and a copy option first.
+    if(target.matches('a[href^="mailto:"]:not([data-pv-mailto-direct])')
+        &&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey){
+      e.preventDefault();openContactDialog(target);return;
+    }
+    if(target.hasAttribute('data-contact-copy')){e.preventDefault();await copyContactEmail();return;}
     if(target.matches('dialog')){const r=target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialogs();return;}
     if(target.matches('[data-close]')){closeDialogs();return;}
     if(target.matches('.nav-toggle')){const open=$('#main-nav').classList.toggle('open');target.setAttribute('aria-expanded',String(open));return;}
+    if(target.id==='project-filter-clear'){
+      const input=$('#project-search');if(input){input.value='';search='';renderProjects();input.focus();}return;
+    }
+    if(target.hasAttribute('data-filter-reset')){
+      filter='all';search='';const input=$('#project-search');if(input)input.value='';
+      $$('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter==='all')));
+      renderProjects();input?.focus();return;
+    }
     if(target.dataset.filter){filter=target.dataset.filter;$$('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===target)));renderProjects();return;}
     if(target.dataset.previewToggle){
       const card=target.closest('.work-project-card');const open=card.classList.toggle('is-preview');

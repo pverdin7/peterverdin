@@ -25,19 +25,29 @@
   function viewReady(){
     $('sample-status').hidden=true;
     $('sample-view').hidden=false;
-    $('sample-stage').classList.add('is-viewing');
+    // Keep the stage optional so a layout change never prevents media from opening.
+    $('sample-stage')?.classList.add('is-viewing');
+  }
+  async function fetchError(response){
+    try { const data=await response.json(); return String(data.error||'').slice(0,180); }
+    catch { return ''; }
+  }
+  function serverFailure(status,reason,what){
+    if(status===401){fail('Portfolio access has expired.','Sign in again, then reopen this work sample.',true);return;}
+    if(status===404){fail(what+' is not available yet.',reason||'Check that the files are in the correct private R2 folder.');return;}
+    const detail=reason?' '+reason:'';
+    fail('The '+what.toLowerCase()+' could not load.',
+      'The protected media service returned HTTP '+status+'.'+detail+' Please check the R2 files and try again.');
   }
   async function open(){
     try{
       if(['pdf','pptx'].includes(ext)){
         const base='/api/preview/'+encodeURIComponent(key)+'/';
         const response=await fetch(base+'manifest',{credentials:'same-origin',cache:'no-store'});
-        if(response.status===401){fail('Portfolio access has expired.','Sign in again, then open this sample from the case study.',true);return;}
-        if(response.status===404){fail('View-only preview not available yet.','The document is protected, but the preview pages still need to be uploaded to Cloudflare R2. You can request to see this work.');return;}
-        if(!response.ok)throw new Error('preview unavailable');
+        if(!response.ok){serverFailure(response.status,await fetchError(response),'View-only preview');return;}
         const manifest=await response.json();
         const pages=manifest.pages;
-        if(!Number.isInteger(pages)||pages<1||pages>500)throw new Error('invalid preview');
+        if(!Number.isInteger(pages)||pages<1||pages>500){fail('Invalid preview index.','The preview page count returned by R2 is incorrect.');return;}
         viewReady();
         $('sample-controls').hidden=pages<2;
         let current=1;
@@ -47,7 +57,11 @@
           image.src=base+current;
           image.alt=label+', page '+current+' of '+pages;
           image.loading='eager'; image.draggable=false;
-          image.addEventListener('error',()=>fail('This preview page could not be loaded.','Please refresh or request this sample.'));
+          image.addEventListener('error',async()=>{
+            try{const res=await fetch(image.src,{credentials:'same-origin',cache:'no-store'});
+              serverFailure(res.status,await fetchError(res),'Preview page '+current);
+            }catch{fail('Unable to display preview page.','The preview image could not be reached.');}
+          });
           $('sample-media').replaceChildren(image);
           $('sample-page-counter').textContent='PAGE '+current+' / '+pages;
           $('sample-page-input').value=String(current);
@@ -69,23 +83,29 @@
       }
       if(ext==='mp4'){
         const url='/api/asset/'+encodeURIComponent(key)+'?play=1';
-        const response=await fetch(url,{method:'HEAD',credentials:'same-origin',cache:'no-store'});
-        if(response.status===401){fail('Portfolio access has expired.','Sign in again, then open this sample from the case study.',true);return;}
-        if(response.status===404){fail('This video is not available yet.','The original video has not been uploaded or is not currently available.');return;}
-        if(!response.ok)throw new Error('video unavailable');
+        // Browser media requests sometimes reject the HEAD preflight even when
+        // a normal byte-range GET is playable. Mount the player immediately.
         viewReady();
         $('sample-page-counter').textContent='VIDEO';
         const video=document.createElement('video');
         video.controls=true;video.playsInline=true;video.preload='metadata';
         video.controlsList?.add('nodownload');video.controlsList?.add('noremoteplayback');
         video.disablePictureInPicture=true;
-        video.src=url; video.setAttribute('aria-label',label);
+        video.src=url;video.setAttribute('aria-label',label);
+        video.addEventListener('error',async()=>{
+          try{
+            const probe=await fetch(url,{method:'GET',headers:{Range:'bytes=0-0'},credentials:'same-origin',cache:'no-store'});
+            if(!probe.ok){serverFailure(probe.status,await fetchError(probe),'Video');return;}
+            fail('This video format could not play.','The protected video exists, but the browser could not decode or stream it. Try another browser.');
+          }catch{fail('Video streaming failed.','The browser could not reach the protected video service.');}
+        });
         $('sample-media').replaceChildren(video);
+        video.load();
         return;
       }
       fail('View-only preview unavailable.','This sample type cannot be previewed in the browser.');
-    }catch{
-      fail('Unable to load the preview.','Check your connection and try again, or request this sample.');
+    }catch(err){
+      fail('Unable to load the preview.','The preview request did not complete. Please refresh; if it persists, check Worker logs.');
     }
   }
   open();
