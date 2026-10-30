@@ -22,7 +22,7 @@
   }
   function chips(p, limit=99) { return p.skills.slice(0,limit).map(s=>`<span class="chip">${esc(s)}</span>`).join(''); }
   function visual(p) {
-    const art = imageNames.has(p.visual)
+    const art = p.id !== 'physical-education-program' && imageNames.has(p.visual)
       ? `<img src="${imagePath(esc(p.visual))}" alt="${esc(p.title)} — cover preview" loading="lazy" width="430" height="260">`
       : `<div class="metric-art"><strong>${esc(p.outcome)}</strong><small>${esc(p.outcomeLabel)}</small><div class="metric-foot" aria-hidden="true"><span>PROJECT ${esc(p.number)} / SELECTED WORK</span><span>↗</span></div></div>`;
     return `<div class="project-visual visual-${esc(p.visual)}"><span class="type-tag">${esc(p.category.toUpperCase())}</span>${art}<span class="corner-no">${esc(p.number)} /</span></div>`;
@@ -32,11 +32,12 @@
   const workPreviewMap = {
     'strategy-client-solutions': {image:'slow-coffee', alt:'Slow by Slow market intelligence presentation cover', caption:'SLOW BY SLOW / MARKET INTELLIGENCE', materials:['Audience research','Proposal pitches','Campaign concept']},
     'author-brand': {image:'book', alt:'Gold in the Cracks book rendering', caption:'GOLD IN THE CRACKS / EXIT DOOR PRESS', materials:['Book & publishing identities','Website, logo & speaker materials']},
+    'portfolio-website': {materials:['Creative direction & UX','AI-assisted development & QA','Cloudflare & GitHub deployment'], kind:'LIVE DIGITAL PRODUCT'},
     'district-onboarding': {materials:['K–6 onboarding lesson','8–12 onboarding lesson'], kind:'SLIDE DECKS'},
     'mtss-data-dives': {materials:['Guided district data dive','Introduction video'], kind:'GUIDED DATA REVIEW'},
     'professional-services': {materials:['Tailored professional-services plan','Implementation & coaching support'], kind:'SERVICE PLANNING'},
     'motor-learning-research': {materials:['Doctoral dissertation','Study design, analysis & findings'], kind:'RESEARCH MANUSCRIPT'},
-    'physical-education-program': {image:'movement', alt:'Keep on Movin’ physical-education program preview', caption:'KEEP ON MOVIN’ / MOVEMENT CURRICULUM', materials:['Curriculum strategy','Fall family update']},
+    'physical-education-program': {materials:['Curriculum strategy','Fall family update'], kind:'CURRICULUM & FAMILY COMMUNICATION'},
     'skateboarding-program': {materials:['After-school program overview','Skateboarding program video'], kind:'PROGRAM & VIDEO'},
     'curriculum-design': {image:'curriculum', alt:'Sample pages from the Athlos physical-education curriculum', caption:'ATHLOS / SAMPLE LESSON PAGES', materials:['Sample lesson plans','Visual teaching resources']},
     'learning-management-system': {materials:['Learning-system introduction','Athletic Stance lesson','Connected webinar example'], kind:'LMS & MICROCREDENTIALING'},
@@ -250,7 +251,7 @@
   /* END GUIDED LEARNING PATH */
   function privatePreviewVisual(p) {
     const item=workPreviewMap[p.id]||{};
-    const name=item.image || (imageNames.has(p.visual) ? p.visual : null);
+    const name=p.id==='physical-education-program' ? null : (item.image || (imageNames.has(p.visual) ? p.visual : null));
     if(name && (imageNames.has(name) || ['slow-coffee','tso','nnu'].includes(name))) {
       const url=name==='book'?'/assets/img/book.svg':'/assets/img/'+name+'.webp';
       return `<div class="case-preview-cover case-cover-${esc(name)}"><img src="${url}" alt="${esc(item.alt || p.title+' project preview')}" loading="lazy"><span class="case-preview-image-caption">${esc(item.caption || p.title)}</span></div>`;
@@ -270,7 +271,11 @@
     return `<a class="case-file case-file-view" href="${destination}" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">${a.kind==='VIDEO'?'▶':isSlides?'▤':'↗'}</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>${descriptor}</small></span><span class="case-file-action">${action} ↗</span></a>`;
   }
   function renderPrivateCase(p) {
-    return `<article class="case-study" id="case-${esc(p.id)}"><div class="case-study-heading"><p class="eyebrow red">Project ${esc(p.number)} / ${esc(p.category)}</p><h3>${esc(p.title)}</h3><p class="case-summary">${esc(p.summary)}</p></div><div class="case-study-columns"><div class="case-narrative"><div class="chips">${chips(p)}</div><div class="case-parts"><div><h4>The challenge</h4><p>${esc(p.challenge)}</p></div><div><h4>The idea & what I did</h4><p>${esc(p.approach)}</p></div><div><h4>The outcome</h4><p>${esc(p.impact)}</p></div></div><div class="case-outcome"><strong>${esc(p.outcome)}</strong><span>${esc(p.outcomeLabel)}</span></div></div><aside class="case-preview" aria-label="Work sample previews for ${esc(p.title)}"><div class="case-preview-top"><span>INSIDE THE WORK</span><span>${p.assets.length} SAMPLE${p.assets.length===1?'':'S'}</span></div>${privatePreviewVisual(p)}<div class="case-preview-files">${p.assets.map(a=>privateAsset(a,p)).join('')}</div><p class="case-preview-help" role="status" aria-live="polite" hidden></p></aside></div>${renderLearningPath(p)}</article>`;
+    const livePortfolio = p.id === 'portfolio-website';
+    const sampleArea = livePortfolio
+      ? `<aside class="case-preview" aria-label="Explore live website"><div class="case-preview-top"><span>LIVE RESULT</span><span>PUBLIC WEBSITE</span></div>${privatePreviewVisual(p)}<div class="case-preview-files"><a class="case-file case-file-view" href="https://peterverdin.com/" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">↗</span><span class="case-file-info"><strong>Visit the live portfolio</strong><small>RESPONSIVE WEBSITE · OPEN IN NEW TAB</small></span><span class="case-file-action">Explore ↗</span></a></div></aside>`
+      : `<aside class="case-preview" aria-label="Work sample previews for ${esc(p.title)}"><div class="case-preview-top"><span>INSIDE THE WORK</span><span>${p.assets.length} SAMPLE${p.assets.length===1?'':'S'}</span></div>${privatePreviewVisual(p)}<div class="case-preview-files">${p.assets.map(a=>privateAsset(a,p)).join('')}</div><p class="case-preview-help" role="status" aria-live="polite" hidden></p></aside>`;
+    return `<article class="case-study" id="case-${esc(p.id)}"><div class="case-study-heading"><p class="eyebrow red">Project ${esc(p.number)} / ${esc(p.category)}</p><h3>${esc(p.title)}</h3><p class="case-summary">${esc(p.summary)}</p></div><div class="case-study-columns"><div class="case-narrative"><div class="chips">${chips(p)}</div><div class="case-parts"><div><h4>The challenge</h4><p>${esc(p.challenge)}</p></div><div><h4>The idea & what I did</h4><p>${esc(p.approach)}</p></div><div><h4>The outcome</h4><p>${esc(p.impact)}</p></div></div><div class="case-outcome"><strong>${esc(p.outcome)}</strong><span>${esc(p.outcomeLabel)}</span></div></div>${sampleArea}</div>${renderLearningPath(p)}</article>`;
   }
   /* A visual table of contents for the authorized work: one tap to jump,
      with a live reading indicator and keyboard-accessible project links. */
@@ -426,69 +431,132 @@
   document.addEventListener('keydown',e=>{if(e.target.matches('[data-tab][role=tab]')&&['ArrowRight','ArrowLeft'].includes(e.key)){e.preventDefault();const name=e.target.dataset.tab==='request'?'login':'request';setTab(name);$(`#${name}-tab`).focus();}});
   window.PV={mount,visual,card};
   mount();
-  
-/* PETER VERDIN — FIX EMOJI ARROWS SITE-WIDE */
-;(() => {
-  const fixArrow = (node) => {
-    if (node.nodeType !== Node.TEXT_NODE) return;
+})();
 
-    if (node.parentElement?.closest(
-      'script, style, textarea, pre, code, [contenteditable]'
-    )) return;
 
-    const original = node.nodeValue;
-    const corrected = original.replace(
-      /\u2197[\uFE0E\uFE0F]?/g,
-      '\u2197\uFE0E'
-    );
+/*
+ * Peter Verdin portfolio — iOS-safe diagonal arrows
+ * Converts ↗ and ↗️ into ↗︎ (Unicode text presentation), including
+ * arrows added later by project previews, view-only cards, and dialogs.
+ * Does not alter links, content, styling, or form behavior.
+ */
+(() => {
+  'use strict';
+  const skip = 'script,style,noscript,template,textarea,pre,code,svg,math';
+  // U+FE0E requests a plain typographic symbol rather than an emoji.
+  const emojiArrow = /\u2197\uFE0F?(?!\uFE0E)/g;
+  const textArrow = '\u2197\uFE0E';
 
-    if (corrected !== original) {
-      node.nodeValue = corrected;
-    }
-  };
-
-  const fixArrows = (root) => {
-    if (root.nodeType === Node.TEXT_NODE) {
-      fixArrow(root);
-      return;
-    }
-
-    const walker = document.createTreeWalker(
-      root,
-      NodeFilter.SHOW_TEXT
-    );
-
-    let node;
-    while ((node = walker.nextNode())) {
-      fixArrow(node);
-    }
-  };
-
-  const start = () => {
-    fixArrows(document.body);
-
-    new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        if (mutation.type === 'characterData') {
-          fixArrow(mutation.target);
-        }
-
-        for (const node of mutation.addedNodes) {
-          fixArrows(node);
-        }
-      }
-    }).observe(document.body, {
-      childList: true,
-      characterData: true,
-      subtree: true
-    });
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start);
-  } else {
-    start();
+  function updateText(node) {
+    if (!node || node.nodeType !== 3 || node.parentElement?.closest(skip)) return;
+    const before = node.nodeValue;
+    const after = before.replace(emojiArrow, textArrow);
+    if (after !== before) node.nodeValue = after;
   }
+
+  function updateTree(root) {
+    if (!root) return;
+    if (root.nodeType === 3) return updateText(root);
+    if (root.nodeType !== 1 || root.matches(skip)) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) updateText(node);
+  }
+
+  function start() {
+    updateTree(document.body);
+    new MutationObserver((changes) => {
+      for (const change of changes) {
+        if (change.type === 'characterData') updateText(change.target);
+        else for (const node of change.addedNodes) updateTree(node);
+      }
+    }).observe(document.body, { subtree: true, childList: true, characterData: true });
+  }
+
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
 })();
 
+
+/* Portfolio: click-to-play YouTube previews for authorized case studies.
+   Paste at the very end of /assets/site.js, after the existing code. */
+;(() => {
+  'use strict';
+  const start = () => {
+    const library = document.getElementById('private-content');
+    if (!library) return;
+
+    const styles = document.createElement('style');
+    styles.textContent = `
+      .pv-youtube-stage { position:relative; aspect-ratio:16/9; width:100%; overflow:hidden;
+        background:#201c1b; color:#f5f0e8; }
+      .pv-youtube-stage img { display:block; width:100%; height:100%; object-fit:cover; }
+      .pv-youtube-play { position:absolute; inset:0; display:flex; align-items:center;
+        justify-content:center; width:100%; height:100%; border:0; cursor:pointer;
+        background:linear-gradient(0deg,rgba(0,0,0,.65),transparent 48%); color:#fff; }
+      .pv-youtube-play:focus-visible { outline:4px solid #db3026; outline-offset:-4px; }
+      .pv-youtube-play-icon { display:grid; place-items:center; width:72px; height:54px;
+        background:#db3026; border:2px solid #f5f0e8; border-radius:12px;
+        box-shadow:0 5px 24px rgba(0,0,0,.3); transition:transform .2s; }
+      .pv-youtube-play:hover .pv-youtube-play-icon { transform:scale(1.08); }
+      .pv-youtube-play-icon:before { content:''; width:0; height:0;
+        border-top:11px solid transparent; border-bottom:11px solid transparent;
+        border-left:17px solid #fff; margin-left:4px; }
+      .pv-youtube-caption { position:absolute; bottom:0; left:0; right:0;
+        padding:11px 15px; text-align:left; font:700 13px/1.3 Arial,sans-serif;
+        letter-spacing:.02em; color:#fff; pointer-events:none; }
+      .pv-youtube-stage iframe { border:0; display:block; width:100%; height:100%; }
+      @media(max-width:740px){.pv-youtube-play-icon{width:64px;height:48px}}
+    `;
+    document.head.appendChild(styles);
+
+    function renderPreviews() {
+      library.querySelectorAll('.case-study .case-preview:not([data-pv-youtube-ready])').forEach(preview => {
+        const link = Array.from(preview.querySelectorAll('.case-file-view[href]'))
+          .find(a => /^https:\/\/www\.youtube\.com\/watch\?v=[a-zA-Z0-9_-]{11}$/.test(a.href));
+        if (!link) return;
+        const id = new URL(link.href).searchParams.get('v');
+        const old = preview.querySelector('.case-preview-cover, .case-preview-graphic');
+        if (!old) return;
+        const caption = link.querySelector('.case-file-info strong')?.textContent || 'Watch video';
+        const stage = document.createElement('div');
+        stage.className = 'pv-youtube-stage';
+        const thumbnail = document.createElement('img');
+        thumbnail.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+        thumbnail.alt = '';
+        thumbnail.loading = 'lazy';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'pv-youtube-play';
+        button.setAttribute('aria-label', `Play ${caption}`);
+        const icon = document.createElement('span');
+        icon.className = 'pv-youtube-play-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        const text = document.createElement('span');
+        text.className = 'pv-youtube-caption';
+        text.textContent = caption;
+        button.append(icon, text);
+        button.addEventListener('click', () => {
+          const frame = document.createElement('iframe');
+          frame.title = caption;
+          frame.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+          frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share');
+          frame.setAttribute('allowfullscreen', '');
+          frame.referrerPolicy = 'strict-origin-when-cross-origin';
+          stage.replaceChildren(frame);
+        });
+        stage.append(thumbnail, button);
+        old.replaceWith(stage);
+        preview.dataset.pvYoutubeReady = 'true';
+        // The existing work-sample row remains a YouTube link if embedding is blocked.
+        link.querySelector('.case-file-action')?.replaceChildren(document.createTextNode('Watch ↗︎'));
+      });
+    }
+    new MutationObserver(renderPreviews).observe(library, {childList:true, subtree:true});
+    renderPreviews();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
 })();
+
