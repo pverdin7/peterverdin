@@ -56,6 +56,31 @@
       const isRole = roleId === 'by-role' || roleId.startsWith('career-');
       select(isRole || (!fragment && document.body.dataset.page === '/resume/') ? 'roles' : 'projects');
       if (save) persist(roleId);
+      // Related-work links target public project cards, not the private case studies.
+      if (roleId.startsWith('preview-')) {
+        const id = roleId.slice('preview-'.length);
+        cancelPendingScroll();
+        pendingFrame = requestAnimationFrame(() => {
+          pendingFrame = null;
+          let card = document.getElementById('preview-' + id);
+          if (!card) {
+            // A category filter can hide the destination. Clear it only when necessary.
+            const all = document.getElementById('project-filter-all');
+            if (all && !all.checked) {
+              all.checked = true;
+              all.dispatchEvent(new Event('change', {bubbles: true}));
+            }
+            card = document.getElementById('preview-' + id);
+          }
+          if (!card) return;
+          // Open the public visual preview. Access codes remain for full work samples.
+          const preview = card.querySelector('[data-preview-toggle]');
+          if (preview && preview.getAttribute('aria-expanded') !== 'true') preview.click();
+          card.scrollIntoView({block: 'start', behavior: motion()});
+          card.querySelector('.work-card-heading h3 button')?.focus({preventScroll: true});
+        });
+        return;
+      }
       if (roleId.startsWith('career-')) {
         const target = document.getElementById(roleId);
         if (target && roles.contains(target)) {
@@ -89,7 +114,7 @@
       const anchor = event.target.closest('a[href]');
       if (!anchor || !root.contains(anchor)) return;
       const href = anchor.getAttribute('href');
-      if (href && (href.startsWith('#career-') || href === '#by-role' || href === '#by-project')) {
+      if (href && (href.startsWith('#career-') || href.startsWith('#preview-') || href === '#by-role' || href === '#by-project')) {
         event.preventDefault();
         event.stopPropagation();
         followFragment(href.slice(1),true);

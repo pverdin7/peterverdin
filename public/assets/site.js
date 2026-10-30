@@ -7,7 +7,8 @@
   const projects = window.PROJECTS || [];
   const imageNames = new Set(['nnu','book','curriculum','facility','playground','movement']);
   const imagePath = name => '/assets/img/' + name + (name === 'book' ? '.svg' : '.webp');
-  let filter = 'all', search = '', activeProject = '', config = {}, authenticated = false, adminAuthenticated = false;
+  const selectedCategories = new Set();
+  let activeProject = '', config = {}, authenticated = false, adminAuthenticated = false;
   let pendingConfig = null, widgets = new Map(), privateCases = [], toastTimer;
   let sessionReady = Promise.resolve(), projectNavigation = 0;
   const scrollBehavior = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
@@ -124,19 +125,29 @@
 
   function renderProjects() {
     const grid=$('#all-projects'); if(!grid) return;
-    const terms=normalizeFilter(search).split(' ').filter(Boolean);
-    const visible=projects.filter(p=>(filter==='all'||p.category===filter)
-      &&terms.every(term=>projectFilterText(p).includes(term)));
+    const visible=projects.filter(p=>selectedCategories.size===0||selectedCategories.has(p.category));
     grid.innerHTML=visible.length
       ? visible.map(card).join('')
-      : '<div class="no-results" role="status"><strong>No matching projects.</strong><p>Try another keyword or clear the filters to see all the work.</p><button type="button" class="filter-reset-btn" data-filter-reset>Show all projects ↗︎</button></div>';
-    const narrowed=terms.length>0||filter!=='all';
-    const suffix=filter==='all'?'':` · ${filter}`;
-    $('#project-count').textContent=narrowed
-      ? `${visible.length} of ${projects.length} projects${suffix}`
+      : '<div class="no-results" role="status"><strong>No matching projects.</strong><p>Try another category or clear the filters.</p><button type="button" class="filter-reset-btn" data-filter-reset>Show all projects ↗︎</button></div>';
+    const count=$('#project-count');
+    if(count)count.textContent=selectedCategories.size
+      ? `${visible.length} of ${projects.length} projects`
       : `${projects.length} projects`;
+    const all=$('#project-filter-all');
+    if(all)all.checked=selectedCategories.size===0;
+    $$('input[data-project-category]').forEach(input=>{
+      input.checked=selectedCategories.has(input.value);
+    });
+    $$('.project-category-option').forEach(label=>{
+      label.classList.toggle('is-active',Boolean($('input',label)?.checked));
+    });
+    $$('#project-filter-options [data-category-count]').forEach(el=>{
+      el.textContent=projects.filter(p=>p.category===el.dataset.categoryCount).length;
+    });
+    const total=$('#project-filter-options [data-all-count]');
+    if(total)total.textContent=projects.length;
     const clear=$('#project-filter-clear');
-    if(clear)clear.hidden=!terms.length;
+    if(clear)clear.hidden=selectedCategories.size===0;
   }
   function toast(message) {
     const el=$('#toast'); if(!el)return; clearTimeout(toastTimer); el.textContent=message;el.hidden=false;
@@ -457,18 +468,22 @@
   }
 
   function mount() {
-    filter='all';search='';widgets.clear();document.body.classList.remove('modal-open');
+    selectedCategories.clear();widgets.clear();document.body.classList.remove('modal-open');
     $$('[data-year]').forEach(e=>e.textContent=new Date().getFullYear());
     $$('[data-featured]').forEach(el=>el.innerHTML=el.dataset.featured.split(',').map(id=>projects.find(p=>p.id===id)).filter(Boolean).map(card).join(''));
     renderProjects();
     $$('dialog').forEach(el=>el.addEventListener('close',()=>document.body.classList.remove('modal-open')));
-    const projectFilterInput=$('#project-search');
-    if(projectFilterInput){
-      const syncFilter=()=>{search=projectFilterInput.value;renderProjects();};
-      projectFilterInput.addEventListener('input',syncFilter);
-      projectFilterInput.addEventListener('search',syncFilter); // includes native search-field clear on Safari
-      projectFilterInput.addEventListener('keydown',event=>{
-        if(event.key==='Escape'&&projectFilterInput.value){event.preventDefault();projectFilterInput.value='';syncFilter();}
+    const options=$('#project-filter-options');
+    if(options){
+      options.addEventListener('change',event=>{
+        const input=event.target;
+        if(!(input instanceof HTMLInputElement)||input.type!=='checkbox')return;
+        if(input.id==='project-filter-all')selectedCategories.clear();
+        else if(input.matches('[data-project-category]')){
+          if(input.checked)selectedCategories.add(input.value);
+          else selectedCategories.delete(input.value);
+        }
+        renderProjects();
       });
     }
     $('#request-form')?.addEventListener('submit',e=>{e.preventDefault();submitForm(e.currentTarget,'request-access',result=>{$('.form-status',e.target).textContent=result.message;e.target.reset();});});
@@ -495,15 +510,9 @@
     if(target.matches('dialog')){const r=target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialogs();return;}
     if(target.matches('[data-close]')){closeDialogs();return;}
     if(target.matches('.nav-toggle')){const open=$('#main-nav').classList.toggle('open');target.setAttribute('aria-expanded',String(open));return;}
-    if(target.id==='project-filter-clear'){
-      const input=$('#project-search');if(input){input.value='';search='';renderProjects();input.focus();}return;
+    if(target.id==='project-filter-clear'||target.hasAttribute('data-filter-reset')){
+      selectedCategories.clear();renderProjects();return;
     }
-    if(target.hasAttribute('data-filter-reset')){
-      filter='all';search='';const input=$('#project-search');if(input)input.value='';
-      $$('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter==='all')));
-      renderProjects();input?.focus();return;
-    }
-    if(target.dataset.filter){filter=target.dataset.filter;$$('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===target)));renderProjects();return;}
     if(target.dataset.previewToggle){
       const card=target.closest('.work-project-card');const open=card.classList.toggle('is-preview');
       target.setAttribute('aria-expanded',String(open));target.innerHTML=open?'Hide preview <span aria-hidden="true">↑</span>':'Preview <span aria-hidden="true">↓</span>';return;
@@ -668,16 +677,27 @@
     if (document.getElementById('pv-three-fixes-styles')) return;
     const style = document.createElement('style');
     style.id = 'pv-three-fixes-styles';
-    style.textContent = String.raw`/* Live project filtering — refined control and clear affordance */
-.project-filter-control{display:flex;align-items:center;gap:9px;min-width:0}
-.project-filter-control .search input{width:clamp(210px,24vw,320px);min-height:42px;font-size:14px;padding:9px 14px;background:var(--white)}
-.project-filter-control .search input:focus-visible{outline:2px solid #DB3026;outline-offset:3px}
-.project-filter-clear,.filter-reset-btn{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;font:700 13px/1.3 var(--sans);padding:10px 14px;white-space:nowrap}
-.project-filter-clear:hover,.filter-reset-btn:hover{color:#DB3026;border-color:#DB3026}
+    style.textContent = String.raw`/* Prepopulated multi-select project filters — desktop and mobile */
+.experience-page .filter-inner{display:block;gap:0}
+.project-category-fieldset{border:0;padding:0;margin:0;min-width:0;width:100%}
+.project-category-heading{padding:0;margin:0 0 12px;font:700 12px/1.4 var(--mono,'Courier New',monospace);letter-spacing:.08em;color:#4d4135}
+.project-category-option-list{display:flex;flex-wrap:wrap;gap:9px}
+.project-category-option{display:inline-flex;align-items:center;gap:9px;cursor:pointer;min-height:46px;padding:9px 13px;border:1px solid #bba996;border-radius:5px;color:#2c2926;background:#f6f1e9;font:600 14px/1.35 var(--sans,Arial,sans-serif);transition:background .15s,border-color .15s}
+.project-category-option input[type=checkbox]{appearance:auto;accent-color:#DB3026;width:17px;height:17px;flex:none;margin:0;cursor:pointer}
+.project-category-option small{font:700 12px/1.2 var(--mono,'Courier New',monospace);color:#675a4d;padding-left:4px}
+.project-category-option:hover{border-color:#DB3026;background:#fffaf3}
+.project-category-option.is-active{background:#f7dcd6;border-color:#c54135;color:#251d1a}
+.project-category-option.is-active small{color:#8a2b25}
+.project-category-option:focus-within{outline:2px solid #DB3026;outline-offset:3px}
+.project-filter-utility{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:11px}
+.project-filter-help{font:500 13px/1.45 var(--sans,Arial,sans-serif);color:#61584f}
+.project-filter-clear,.filter-reset-btn{border:1px solid #bba996;background:transparent;color:#2c2926;border-radius:4px;font:700 13px/1.3 var(--sans,Arial,sans-serif);padding:9px 13px}
+.project-filter-clear:hover,.filter-reset-btn:hover{border-color:#DB3026;color:#DB3026}
 .project-filter-clear[hidden]{display:none!important}
 .no-results strong{display:block;font-size:21px;color:var(--ink)}
 .no-results p{margin:8px 0 18px}
-@media(max-width:850px){.project-filter-control{width:100%}.project-filter-control .search{flex:1}.project-filter-control .search input{width:100%;min-width:0;font-size:16px}}
+@media(max-width:650px){.project-category-option-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.project-category-option{padding:10px 9px;min-width:0;font-size:13px;min-height:54px}.project-category-option small{margin-left:auto;padding-left:2px}.project-category-heading{font-size:12px}.project-filter-help{font-size:13px}}
+@media(max-width:385px){.project-category-option-list{grid-template-columns:1fr}.project-category-option{min-height:45px;padding-inline:12px}}
 /* Browser-independent contact dialog — compatible with existing dialog styles */
 .pv-contact-dialog{max-width:min(570px,calc(100vw - 28px))}
 .pv-contact-dialog h2{font-size:clamp(35px,7vw,55px);letter-spacing:-.05em;margin:16px 0}
