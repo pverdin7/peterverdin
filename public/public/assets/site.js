@@ -421,4 +421,83 @@
   document.addEventListener('keydown',e=>{if(e.target.matches('[data-tab][role=tab]')&&['ArrowRight','ArrowLeft'].includes(e.key)){e.preventDefault();const name=e.target.dataset.tab==='request'?'login':'request';setTab(name);$(`#${name}-tab`).focus();}});
   window.PV={mount,visual,card};
   mount();
+  ;(() => {
+  'use strict';
+  const start = () => {
+    const library = document.getElementById('private-content');
+    if (!library) return;
+
+    const styles = document.createElement('style');
+    styles.textContent = `
+      .pv-youtube-stage { position:relative; aspect-ratio:16/9; width:100%; overflow:hidden;
+        background:#201c1b; color:#f5f0e8; }
+      .pv-youtube-stage img { display:block; width:100%; height:100%; object-fit:cover; }
+      .pv-youtube-play { position:absolute; inset:0; display:flex; align-items:center;
+        justify-content:center; width:100%; height:100%; border:0; cursor:pointer;
+        background:linear-gradient(0deg,rgba(0,0,0,.65),transparent 48%); color:#fff; }
+      .pv-youtube-play:focus-visible { outline:4px solid #db3026; outline-offset:-4px; }
+      .pv-youtube-play-icon { display:grid; place-items:center; width:72px; height:54px;
+        background:#db3026; border:2px solid #f5f0e8; border-radius:12px;
+        box-shadow:0 5px 24px rgba(0,0,0,.3); transition:transform .2s; }
+      .pv-youtube-play:hover .pv-youtube-play-icon { transform:scale(1.08); }
+      .pv-youtube-play-icon:before { content:''; width:0; height:0;
+        border-top:11px solid transparent; border-bottom:11px solid transparent;
+        border-left:17px solid #fff; margin-left:4px; }
+      .pv-youtube-caption { position:absolute; bottom:0; left:0; right:0;
+        padding:11px 15px; text-align:left; font:700 13px/1.3 Arial,sans-serif;
+        letter-spacing:.02em; color:#fff; pointer-events:none; }
+      .pv-youtube-stage iframe { border:0; display:block; width:100%; height:100%; }
+      @media(max-width:740px){.pv-youtube-play-icon{width:64px;height:48px}}
+    `;
+    document.head.appendChild(styles);
+
+    function renderPreviews() {
+      library.querySelectorAll('.case-study .case-preview:not([data-pv-youtube-ready])').forEach(preview => {
+        const link = Array.from(preview.querySelectorAll('.case-file-view[href]'))
+          .find(a => /^https:\/\/www\.youtube\.com\/watch\?v=[a-zA-Z0-9_-]{11}$/.test(a.href));
+        if (!link) return;
+        const id = new URL(link.href).searchParams.get('v');
+        const old = preview.querySelector('.case-preview-cover, .case-preview-graphic');
+        if (!old) return;
+        const caption = link.querySelector('.case-file-info strong')?.textContent || 'Watch video';
+        const stage = document.createElement('div');
+        stage.className = 'pv-youtube-stage';
+        const thumbnail = document.createElement('img');
+        thumbnail.src = `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+        thumbnail.alt = '';
+        thumbnail.loading = 'lazy';
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'pv-youtube-play';
+        button.setAttribute('aria-label', `Play ${caption}`);
+        const icon = document.createElement('span');
+        icon.className = 'pv-youtube-play-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        const text = document.createElement('span');
+        text.className = 'pv-youtube-caption';
+        text.textContent = caption;
+        button.append(icon, text);
+        button.addEventListener('click', () => {
+          const frame = document.createElement('iframe');
+          frame.title = caption;
+          frame.src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+          frame.setAttribute('allow', 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share');
+          frame.setAttribute('allowfullscreen', '');
+          frame.referrerPolicy = 'strict-origin-when-cross-origin';
+          stage.replaceChildren(frame);
+        });
+        stage.append(thumbnail, button);
+        old.replaceWith(stage);
+        preview.dataset.pvYoutubeReady = 'true';
+        // The existing work-sample row remains a YouTube link if embedding is blocked.
+        link.querySelector('.case-file-action')?.replaceChildren(document.createTextNode('Watch ↗︎'));
+      });
+    }
+    new MutationObserver(renderPreviews).observe(library, {childList:true, subtree:true});
+    renderPreviews();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();
+
 })();
