@@ -323,5 +323,5 @@ test('PowerPoint viewer release includes Worker route and page-image viewer',()=
  assert.match(source,/status:302/);
  assert.match(source,/previewInfo\(env,key\)/);
  assert.match(worker,/onRequest/);
- assert.match(viewerHTML,/sample\.js\?v=20261029-sample36/);
+ assert.match(viewerHTML,/sample\.js\?v=20261029-email50/);
 });
