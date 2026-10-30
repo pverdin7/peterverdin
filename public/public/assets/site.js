@@ -22,7 +22,7 @@
   }
   function chips(p, limit=99) { return p.skills.slice(0,limit).map(s=>`<span class="chip">${esc(s)}</span>`).join(''); }
   function visual(p) {
-    const art = imageNames.has(p.visual)
+    const art = p.id !== 'physical-education-program' && imageNames.has(p.visual)
       ? `<img src="${imagePath(esc(p.visual))}" alt="${esc(p.title)} — cover preview" loading="lazy" width="430" height="260">`
       : `<div class="metric-art"><strong>${esc(p.outcome)}</strong><small>${esc(p.outcomeLabel)}</small><div class="metric-foot" aria-hidden="true"><span>PROJECT ${esc(p.number)} / SELECTED WORK</span><span>↗</span></div></div>`;
     return `<div class="project-visual visual-${esc(p.visual)}"><span class="type-tag">${esc(p.category.toUpperCase())}</span>${art}<span class="corner-no">${esc(p.number)} /</span></div>`;
@@ -36,7 +36,7 @@
     'mtss-data-dives': {materials:['Guided district data dive','Introduction video'], kind:'GUIDED DATA REVIEW'},
     'professional-services': {materials:['Tailored professional-services plan','Implementation & coaching support'], kind:'SERVICE PLANNING'},
     'motor-learning-research': {materials:['Doctoral dissertation','Study design, analysis & findings'], kind:'RESEARCH MANUSCRIPT'},
-    'physical-education-program': {image:'movement', alt:'Keep on Movin’ physical-education program preview', caption:'KEEP ON MOVIN’ / MOVEMENT CURRICULUM', materials:['Curriculum strategy','Fall family update']},
+    'physical-education-program': {materials:['Curriculum strategy','Fall family update'], kind:'CURRICULUM & FAMILY COMMUNICATION'},
     'skateboarding-program': {materials:['After-school program overview','Skateboarding program video'], kind:'PROGRAM & VIDEO'},
     'curriculum-design': {image:'curriculum', alt:'Sample pages from the Athlos physical-education curriculum', caption:'ATHLOS / SAMPLE LESSON PAGES', materials:['Sample lesson plans','Visual teaching resources']},
     'learning-management-system': {materials:['Learning-system introduction','Athletic Stance lesson','Connected webinar example'], kind:'LMS & MICROCREDENTIALING'},
@@ -95,7 +95,7 @@
 
   function cardVisual(p) {
     const kicker = p.id === 'webinar-delivery' ? '<span class="work-stat-kicker">UP TO</span>' : '';
-    return `<div class="work-card-visual work-visual-${esc(p.visual)}"><div class="work-front"><svg class="work-deco" data-watermark="sculptural" viewBox="0 0 480 320" fill="none" aria-hidden="true" focusable="false"><g class="wm-portal"><path class="wm-band" d="M266 342V154C266 86 312 40 380 40S494 86 494 154V342" style="--wm-band:27px"/><path class="wm-band" d="M311 342V156C311 115 339 86 380 86S449 115 449 156V342" style="--wm-band:24px"/><path class="wm-band" d="M354 342V158C354 141 364 130 380 130S406 141 406 158V342" style="--wm-band:21px"/><path class="wm-solid" d="M236 18H292V44H272V67H236Z"/></g><g class="wm-wave"><path class="wm-band" d="M250 -32C420 -10 238 104 398 133S276 267 452 352" style="--wm-band:28px"/><path class="wm-band" d="M306 -32C476 -10 294 104 454 133S332 267 508 352" style="--wm-band:26px"/><path class="wm-band" d="M362 -32C532 -10 350 104 510 133S388 267 564 352" style="--wm-band:24px"/><path class="wm-solid" d="M248 250H291V277H272V305H248Z"/></g><g class="wm-fan"><path class="wm-band" d="M250 342V278A205 205 0 0 1 455 73H510" style="--wm-band:28px"/><path class="wm-band" d="M297 342V280A160 160 0 0 1 457 120H510" style="--wm-band:26px"/><path class="wm-band" d="M343 342V280A114 114 0 0 1 457 166H510" style="--wm-band:24px"/><path class="wm-solid" d="M250 18H320V46H299V74H250Z"/></g></svg><div class="work-front-top"><span>${esc(p.category.toUpperCase())}</span><span>${esc(p.number)} /</span></div><div class="work-stat-block">${kicker}<strong class="work-front-stat">${esc(p.outcome)}</strong><span class="work-front-label">${esc(workFrontLabel(p))}</span></div><div class="work-front-bottom"><span class="work-hint-desktop">HOVER TO PREVIEW</span><span class="work-hint-touch">A CLOSER LOOK BELOW</span><span aria-hidden="true">↗</span></div></div>${workPeekContent(p)}</div>`;
+    return `<div class="work-card-visual work-visual-${esc(p.visual)}"><div class="work-front"><svg class="work-deco" data-watermark="editorial" viewBox="0 0 480 320" fill="none" aria-hidden="true" focusable="false">${Number(p.number)%2 ? '<path class="work-gesture" d="M320 90C345 36 366 49 370 81C372 110 402 120 415 83C425 53 449 42 488 78" />' : '<path class="work-blob" d="M385 21C413 8 436 23 450 42C481 42 505 72 484 104C500 129 470 158 438 153C416 168 379 153 374 127C345 115 346 85 369 69C364 47 369 32 385 21Z" />'}</svg><div class="work-front-top"><span>${esc(p.category.toUpperCase())}</span><span>${esc(p.number)} /</span></div><div class="work-stat-block">${kicker}<strong class="work-front-stat">${esc(p.outcome)}</strong><span class="work-front-label">${esc(workFrontLabel(p))}</span></div><div class="work-front-bottom"><span class="work-hint-desktop">HOVER TO PREVIEW</span><span class="work-hint-touch">A CLOSER LOOK BELOW</span><span aria-hidden="true">↗</span></div></div>${workPeekContent(p)}</div>`;
   }
 
   function card(p) {
@@ -250,7 +250,7 @@
   /* END GUIDED LEARNING PATH */
   function privatePreviewVisual(p) {
     const item=workPreviewMap[p.id]||{};
-    const name=item.image || (imageNames.has(p.visual) ? p.visual : null);
+    const name=p.id==='physical-education-program' ? null : (item.image || (imageNames.has(p.visual) ? p.visual : null));
     if(name && (imageNames.has(name) || ['slow-coffee','tso','nnu'].includes(name))) {
       const url=name==='book'?'/assets/img/book.svg':'/assets/img/'+name+'.webp';
       return `<div class="case-preview-cover case-cover-${esc(name)}"><img src="${url}" alt="${esc(item.alt || p.title+' project preview')}" loading="lazy"><span class="case-preview-image-caption">${esc(item.caption || p.title)}</span></div>`;
@@ -259,10 +259,15 @@
   }
   function privateAsset(a,p) {
     if(!a.available) return `<div class="case-file case-file-missing"><span class="case-file-icon" aria-hidden="true">?</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>Available by request</small></span><a class="case-file-action" href="mailto:goldinthecracksofficial@gmail.com?subject=${encodeURIComponent('Work sample request: '+p.title+' — '+a.label)}">Request ↗</a></div>`;
+    const isSlides=/\.pptx$/i.test(a.key);
+    const isDocument=isSlides||/\.pdf$/i.test(a.key);
     const fileUrl=`/sample/?file=${encodeURIComponent(a.key)}&amp;label=${encodeURIComponent(a.label)}&amp;case=${encodeURIComponent(p.title)}`;
-    const destination=a.externalUrl?esc(a.externalUrl):fileUrl;
-    const action='View';
-    return `<a class="case-file case-file-download" href="${destination}" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">${a.kind==='VIDEO'?'▶':a.kind==='PRESENTATION'?'▤':'↗'}</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>${esc(a.kind)} · ${a.externalUrl?'YouTube video':a.kind==='PRESENTATION'?'View-only slides':'Private view-only preview'}</small></span><span class="case-file-action">${action} ↗</span></a>`;
+    // A document/presentation is always viewed as page images, never linked
+    // to its R2 original (even if the case-study JSON contains externalUrl).
+    const destination=(!isDocument&&a.kind==='VIDEO'&&a.externalUrl)?esc(a.externalUrl):fileUrl;
+    const action=isSlides?'View slides':'View';
+    const descriptor=isSlides?'SLIDE DECK · View-only slides':/\.pdf$/i.test(a.key)?'DOCUMENT · View-only pages':a.externalUrl&&a.kind==='VIDEO'?'VIDEO · Hosted playback':'VIDEO · Private streaming';
+    return `<a class="case-file case-file-view" href="${destination}" target="_blank" rel="noopener noreferrer"><span class="case-file-icon" aria-hidden="true">${a.kind==='VIDEO'?'▶':isSlides?'▤':'↗'}</span><span class="case-file-info"><strong>${esc(a.label)}</strong><small>${descriptor}</small></span><span class="case-file-action">${action} ↗</span></a>`;
   }
   function renderPrivateCase(p) {
     return `<article class="case-study" id="case-${esc(p.id)}"><div class="case-study-heading"><p class="eyebrow red">Project ${esc(p.number)} / ${esc(p.category)}</p><h3>${esc(p.title)}</h3><p class="case-summary">${esc(p.summary)}</p></div><div class="case-study-columns"><div class="case-narrative"><div class="chips">${chips(p)}</div><div class="case-parts"><div><h4>The challenge</h4><p>${esc(p.challenge)}</p></div><div><h4>The idea & what I did</h4><p>${esc(p.approach)}</p></div><div><h4>The outcome</h4><p>${esc(p.impact)}</p></div></div><div class="case-outcome"><strong>${esc(p.outcome)}</strong><span>${esc(p.outcomeLabel)}</span></div></div><aside class="case-preview" aria-label="Work sample previews for ${esc(p.title)}"><div class="case-preview-top"><span>INSIDE THE WORK</span><span>${p.assets.length} SAMPLE${p.assets.length===1?'':'S'}</span></div>${privatePreviewVisual(p)}<div class="case-preview-files">${p.assets.map(a=>privateAsset(a,p)).join('')}</div><p class="case-preview-help" role="status" aria-live="polite" hidden></p></aside></div>${renderLearningPath(p)}</article>`;
@@ -421,7 +426,57 @@
   document.addEventListener('keydown',e=>{if(e.target.matches('[data-tab][role=tab]')&&['ArrowRight','ArrowLeft'].includes(e.key)){e.preventDefault();const name=e.target.dataset.tab==='request'?'login':'request';setTab(name);$(`#${name}-tab`).focus();}});
   window.PV={mount,visual,card};
   mount();
-  ;(() => {
+})();
+
+
+/*
+ * Peter Verdin portfolio — iOS-safe diagonal arrows
+ * Converts ↗ and ↗️ into ↗︎ (Unicode text presentation), including
+ * arrows added later by project previews, view-only cards, and dialogs.
+ * Does not alter links, content, styling, or form behavior.
+ */
+(() => {
+  'use strict';
+  const skip = 'script,style,noscript,template,textarea,pre,code,svg,math';
+  // U+FE0E requests a plain typographic symbol rather than an emoji.
+  const emojiArrow = /\u2197\uFE0F?(?!\uFE0E)/g;
+  const textArrow = '\u2197\uFE0E';
+
+  function updateText(node) {
+    if (!node || node.nodeType !== 3 || node.parentElement?.closest(skip)) return;
+    const before = node.nodeValue;
+    const after = before.replace(emojiArrow, textArrow);
+    if (after !== before) node.nodeValue = after;
+  }
+
+  function updateTree(root) {
+    if (!root) return;
+    if (root.nodeType === 3) return updateText(root);
+    if (root.nodeType !== 1 || root.matches(skip)) return;
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let node;
+    while ((node = walker.nextNode())) updateText(node);
+  }
+
+  function start() {
+    updateTree(document.body);
+    new MutationObserver((changes) => {
+      for (const change of changes) {
+        if (change.type === 'characterData') updateText(change.target);
+        else for (const node of change.addedNodes) updateTree(node);
+      }
+    }).observe(document.body, { subtree: true, childList: true, characterData: true });
+  }
+
+  if (document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+  else start();
+})();
+
+
+/* Portfolio: click-to-play YouTube previews for authorized case studies.
+   Paste at the very end of /assets/site.js, after the existing code. */
+;(() => {
   'use strict';
   const start = () => {
     const library = document.getElementById('private-content');
@@ -500,4 +555,3 @@
   else start();
 })();
 
-})();
