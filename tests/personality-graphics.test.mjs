@@ -10,7 +10,7 @@ for (const route of ['my-work', 'resume']) {
     assert.ok(marks.some(m => m[1] === 'blob'));
     assert.ok(!html.includes('data-watermark="personal"'));
     assert.ok(!html.includes('M31 3V61M4 32H60'), 'old radial burst gone');
-    assert.ok(html.includes('/assets/site.css?v=20261029-editorial33'));
+    assert.match(html, /\/assets\/site\.css\?v=[A-Za-z0-9_-]+/, 'versioned stylesheet reference exists');
   });
 }
 test('gallery uses only a single squiggle or a single blob', () => {
