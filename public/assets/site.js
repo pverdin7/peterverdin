@@ -69,6 +69,24 @@
     'playground-design': {label:'RELATED EXPERIENCE',roles:[['Athlos Academies','Associate Director of Healthy Body','career-athlos-director'],['Athlos Academies','Product Manager // Coach Education Manager','career-athlos-product']]}
   };
 
+  // Live, local filtering of the existing cards; nothing is submitted or sent to a server.
+  const normalizeFilter = value => String(value ?? '')
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9+]+/g, ' ').trim();
+  const filterAliases = {
+    'portfolio-website': 'peterverdin.com website web development github artificial intelligence ai cloudflare personal portfolio 24 hours',
+    'strategy-client-solutions': 'kivi idaho news 6 advertising sales big game new business media consulting',
+    'learning-management-system': 'healthy body university microcredentials learning management system',
+    'skateboarding-program': 'skateboarding skateboard after school club video',
+    'webinar-delivery': 'bulgarian sports coaching webinar international webinar'
+  };
+  function projectFilterText(p) {
+    return normalizeFilter([
+      p.title, p.summary, p.eyebrow, p.outcome, p.outcomeLabel, p.category,
+      ...(p.skills || []), workRoleSearchText(p), p.id.replace(/-/g, ' '), filterAliases[p.id] || ''
+    ].join(' '));
+  }
+
   function workRoleSearchText(p) {
     const item=workRoleMap[p.id];
     return item ? item.roles.map(role=>`${role[0]} ${role[1]}`).join(' ') : '';
@@ -106,11 +124,19 @@
 
   function renderProjects() {
     const grid=$('#all-projects'); if(!grid) return;
-    const visible=projects.filter(p=>(filter==='all'||p.category===filter)&&`${p.title} ${p.summary} ${p.skills.join(' ')} ${p.category} ${workRoleSearchText(p)}`.toLowerCase().includes(search));
-    const shown = visible;
-    grid.innerHTML=visible.length ? shown.map(card).join('') : '<p class="no-results">No projects match that search. Try another skill or choose “All work.”</p>';
-    $('#project-count').textContent=`${shown.length<visible.length?`${shown.length} of `:''}${visible.length} project${visible.length===1?'':'s'}${filter==='all'?'':` · ${filter}`}`;
-    
+    const terms=normalizeFilter(search).split(' ').filter(Boolean);
+    const visible=projects.filter(p=>(filter==='all'||p.category===filter)
+      &&terms.every(term=>projectFilterText(p).includes(term)));
+    grid.innerHTML=visible.length
+      ? visible.map(card).join('')
+      : '<div class="no-results" role="status"><strong>No matching projects.</strong><p>Try another keyword or clear the filters to see all the work.</p><button type="button" class="filter-reset-btn" data-filter-reset>Show all projects ↗︎</button></div>';
+    const narrowed=terms.length>0||filter!=='all';
+    const suffix=filter==='all'?'':` · ${filter}`;
+    $('#project-count').textContent=narrowed
+      ? `${visible.length} of ${projects.length} projects${suffix}`
+      : `${projects.length} projects`;
+    const clear=$('#project-filter-clear');
+    if(clear)clear.hidden=!terms.length;
   }
   function toast(message) {
     const el=$('#toast'); if(!el)return; clearTimeout(toastTimer); el.textContent=message;el.hidden=false;
@@ -377,13 +403,74 @@
     await sessionReady;
     if(navigation===projectNavigation&&projectIdFromHash()===id)projectDialog(id);
   }
+  const fallbackEmail='goldinthecracksofficial@gmail.com';
+  let contactReturnFocus=null;
+  function ensureContactDialog() {
+    let dialog=$('#pv-contact-dialog');if(dialog)return dialog;
+    dialog=document.createElement('dialog');
+    dialog.id='pv-contact-dialog';
+    dialog.className='dialog pv-contact-dialog';
+    dialog.setAttribute('aria-labelledby','pv-contact-title');
+    dialog.innerHTML=`<button type="button" class="dialog-close" data-close aria-label="Close contact panel">×</button>
+      <div class="dialog-inner">
+        <p class="eyebrow red">A GOOD PLACE TO START</p>
+        <h2 id="pv-contact-title">LET’S TALK.</h2>
+        <p class="intro">Have an idea, an opportunity, or a question? Reach out directly.</p>
+        <label class="pv-contact-field" for="pv-contact-email">EMAIL ADDRESS</label>
+        <input id="pv-contact-email" class="pv-contact-email" type="text" value="${fallbackEmail}" readonly spellcheck="false" aria-label="Email address to copy">
+        <div class="pv-contact-actions">
+          <button type="button" class="btn pv-contact-copy" data-contact-copy>Copy email address ↗︎</button>
+          <a class="btn outline pv-contact-launch" id="pv-contact-launch" data-pv-mailto-direct href="mailto:goldinthecracksofficial@gmail.com">Open email app ↗︎</a>
+        </div>
+        <p class="pv-contact-status" id="pv-contact-status" role="status" aria-live="polite">Copy the address if your browser doesn't have an email app configured.</p>
+      </div>`;
+    dialog.addEventListener('close',()=>{
+      document.body.classList.remove('modal-open');
+      if(contactReturnFocus?.isConnected)contactReturnFocus.focus({preventScroll:true});
+      contactReturnFocus=null;
+    });
+    document.body.appendChild(dialog);
+    return dialog;
+  }
+  function openContactDialog(link){
+    const href=link.getAttribute('href') || 'mailto:goldinthecracksofficial@gmail.com';
+    const address=decodeURIComponent(href.slice(7).split('?')[0]) || fallbackEmail;
+    const dialog=ensureContactDialog();
+    contactReturnFocus=link;
+    $('#pv-contact-email',dialog).value=address;
+    $('#pv-contact-launch',dialog).href=href;
+    $('#pv-contact-status',dialog).textContent='Copy the address if your browser doesn\'t have an email app configured.';
+    openDialog('#pv-contact-dialog');
+    $('[data-contact-copy]',dialog)?.focus({preventScroll:true});
+  }
+  async function copyContactEmail(){
+    const input=$('#pv-contact-email'),status=$('#pv-contact-status');
+    if(!input||!status)return;
+    try {
+      if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(input.value);}
+      else {input.focus();input.select();if(!document.execCommand('copy'))throw new Error('Copy unavailable');}
+      status.textContent='Email address copied. Paste it into your preferred email service.';
+    }catch(err){
+      input.focus();input.select();
+      status.textContent='The address is selected. Copy it manually and paste it into your email service.';
+    }
+  }
+
   function mount() {
     filter='all';search='';widgets.clear();document.body.classList.remove('modal-open');
     $$('[data-year]').forEach(e=>e.textContent=new Date().getFullYear());
     $$('[data-featured]').forEach(el=>el.innerHTML=el.dataset.featured.split(',').map(id=>projects.find(p=>p.id===id)).filter(Boolean).map(card).join(''));
     renderProjects();
     $$('dialog').forEach(el=>el.addEventListener('close',()=>document.body.classList.remove('modal-open')));
-    $('#project-search')?.addEventListener('input',e=>{search=e.target.value.trim().toLowerCase();renderProjects();});
+    const projectFilterInput=$('#project-search');
+    if(projectFilterInput){
+      const syncFilter=()=>{search=projectFilterInput.value;renderProjects();};
+      projectFilterInput.addEventListener('input',syncFilter);
+      projectFilterInput.addEventListener('search',syncFilter); // includes native search-field clear on Safari
+      projectFilterInput.addEventListener('keydown',event=>{
+        if(event.key==='Escape'&&projectFilterInput.value){event.preventDefault();projectFilterInput.value='';syncFilter();}
+      });
+    }
     $('#request-form')?.addEventListener('submit',e=>{e.preventDefault();submitForm(e.currentTarget,'request-access',result=>{$('.form-status',e.target).textContent=result.message;e.target.reset();});});
     $('#password-form')?.addEventListener('submit',e=>{e.preventDefault();submitForm(e.currentTarget,'password-login',authenticateAndOpen);});
     $('#email-login-form')?.addEventListener('submit',e=>{e.preventDefault();submitForm(e.currentTarget,'login',result=>{$('.form-status',e.target).textContent=result.message;});});
@@ -399,9 +486,23 @@
   document.addEventListener('click',async e=>{
     const target=e.target.closest('button,a,dialog');if(!target)return;
     if(target.hasAttribute('data-learning-step')){selectLearningStep(target);return;}
+    // A mailto link may do nothing on desktop; show the address and a copy option first.
+    if(target.matches('a[href^="mailto:"]:not([data-pv-mailto-direct])')
+        &&!e.metaKey&&!e.ctrlKey&&!e.shiftKey&&!e.altKey){
+      e.preventDefault();openContactDialog(target);return;
+    }
+    if(target.hasAttribute('data-contact-copy')){e.preventDefault();await copyContactEmail();return;}
     if(target.matches('dialog')){const r=target.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeDialogs();return;}
     if(target.matches('[data-close]')){closeDialogs();return;}
     if(target.matches('.nav-toggle')){const open=$('#main-nav').classList.toggle('open');target.setAttribute('aria-expanded',String(open));return;}
+    if(target.id==='project-filter-clear'){
+      const input=$('#project-search');if(input){input.value='';search='';renderProjects();input.focus();}return;
+    }
+    if(target.hasAttribute('data-filter-reset')){
+      filter='all';search='';const input=$('#project-search');if(input)input.value='';
+      $$('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.filter==='all')));
+      renderProjects();input?.focus();return;
+    }
     if(target.dataset.filter){filter=target.dataset.filter;$$('[data-filter]').forEach(b=>b.setAttribute('aria-pressed',String(b===target)));renderProjects();return;}
     if(target.dataset.previewToggle){
       const card=target.closest('.work-project-card');const open=card.classList.toggle('is-preview');
@@ -560,3 +661,51 @@
   else start();
 })();
 
+
+/* Minimal UI patch styles. These are injected here to avoid replacing the site's stylesheet. */
+;(() => {
+  const install = () => {
+    if (document.getElementById('pv-three-fixes-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'pv-three-fixes-styles';
+    style.textContent = String.raw`/* Live project filtering — refined control and clear affordance */
+.project-filter-control{display:flex;align-items:center;gap:9px;min-width:0}
+.project-filter-control .search input{width:clamp(210px,24vw,320px);min-height:42px;font-size:14px;padding:9px 14px;background:var(--white)}
+.project-filter-control .search input:focus-visible{outline:2px solid #DB3026;outline-offset:3px}
+.project-filter-clear,.filter-reset-btn{border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;font:700 13px/1.3 var(--sans);padding:10px 14px;white-space:nowrap}
+.project-filter-clear:hover,.filter-reset-btn:hover{color:#DB3026;border-color:#DB3026}
+.project-filter-clear[hidden]{display:none!important}
+.no-results strong{display:block;font-size:21px;color:var(--ink)}
+.no-results p{margin:8px 0 18px}
+@media(max-width:850px){.project-filter-control{width:100%}.project-filter-control .search{flex:1}.project-filter-control .search input{width:100%;min-width:0;font-size:16px}}
+/* Browser-independent contact dialog — compatible with existing dialog styles */
+.pv-contact-dialog{max-width:min(570px,calc(100vw - 28px))}
+.pv-contact-dialog h2{font-size:clamp(35px,7vw,55px);letter-spacing:-.05em;margin:16px 0}
+.pv-contact-dialog .intro{font-size:16px;line-height:1.6;max-width:440px}
+.pv-contact-field{display:block;font:700 13px/1.4 'Courier New',monospace;margin:28px 0 9px;color:#62594e;letter-spacing:.04em}
+.pv-contact-email{display:block;width:100%;padding:15px 13px;border:1px solid #bfb4a6;border-radius:8px;color:var(--ink);background:#fff;font-size:clamp(13px,3.8vw,19px);min-width:0;text-overflow:ellipsis}
+.pv-contact-email:focus-visible{outline:2px solid #DB3026;outline-offset:2px}
+.pv-contact-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:19px}
+.pv-contact-actions .btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:48px;text-align:center;font-size:13px}
+.pv-contact-status{font-size:13px;color:#62594e;line-height:1.5;margin-top:15px}
+@media(max-width:600px){.pv-contact-dialog .dialog-inner{padding:34px 20px 26px}.pv-contact-actions{flex-direction:column}.pv-contact-actions .btn{width:100%;font-size:15px}}
+
+/* Resume detail accordions: one clear inline label + adjacent toggle icon.
+   Metrics remain clickable as before; the summary is the only visible text CTA. */
+.career-page .career-details > summary{justify-content:flex-start;gap:9px;padding:17px 22px;min-height:54px}
+.career-page .career-details > summary .career-detail-plus{display:inline-block;flex:none;font-size:22px;line-height:1;transform-origin:center}
+.career-page .career-details > summary:hover{background:#eee9e1}
+.career-page .career-details > summary:focus-visible{outline:2px solid var(--career-red);outline-offset:-2px}
+@media(max-width:650px){.career-page .career-details > summary{gap:8px;padding:16px 18px}}
+
+/* Static role visual: the following summary is the only expandable control */
+.career-page .career-visual-trigger:not(button){cursor:default}
+.career-page .career-visual-trigger:not(button):hover .career-tile{background:#e9e2d7}
+.career-page .career-visual-trigger:not(button):hover .career-tile:first-child{background:#302c27}
+.career-page .career-visual-trigger:not(button):hover .career-tile-mark{transform:none}
+`;
+    document.head.appendChild(style);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install, {once:true});
+  else install();
+})();
