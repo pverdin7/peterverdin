@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+console.log('CHECK_BUILD_RESUME_FIX_V2_ACTIVE');
 import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 const walk=dir=>fs.readdirSync(dir,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(dir,e.name)):[path.join(dir,e.name)]);
