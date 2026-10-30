@@ -426,4 +426,69 @@
   document.addEventListener('keydown',e=>{if(e.target.matches('[data-tab][role=tab]')&&['ArrowRight','ArrowLeft'].includes(e.key)){e.preventDefault();const name=e.target.dataset.tab==='request'?'login':'request';setTab(name);$(`#${name}-tab`).focus();}});
   window.PV={mount,visual,card};
   mount();
+  
+/* PETER VERDIN — FIX EMOJI ARROWS SITE-WIDE */
+;(() => {
+  const fixArrow = (node) => {
+    if (node.nodeType !== Node.TEXT_NODE) return;
+
+    if (node.parentElement?.closest(
+      'script, style, textarea, pre, code, [contenteditable]'
+    )) return;
+
+    const original = node.nodeValue;
+    const corrected = original.replace(
+      /\u2197[\uFE0E\uFE0F]?/g,
+      '\u2197\uFE0E'
+    );
+
+    if (corrected !== original) {
+      node.nodeValue = corrected;
+    }
+  };
+
+  const fixArrows = (root) => {
+    if (root.nodeType === Node.TEXT_NODE) {
+      fixArrow(root);
+      return;
+    }
+
+    const walker = document.createTreeWalker(
+      root,
+      NodeFilter.SHOW_TEXT
+    );
+
+    let node;
+    while ((node = walker.nextNode())) {
+      fixArrow(node);
+    }
+  };
+
+  const start = () => {
+    fixArrows(document.body);
+
+    new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === 'characterData') {
+          fixArrow(mutation.target);
+        }
+
+        for (const node of mutation.addedNodes) {
+          fixArrows(node);
+        }
+      }
+    }).observe(document.body, {
+      childList: true,
+      characterData: true,
+      subtree: true
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+})();
+
 })();
