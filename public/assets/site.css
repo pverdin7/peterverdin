@@ -1096,3 +1096,9 @@ a[href^="mailto:"]{overflow-wrap:anywhere}
   .work-project-card .work-deco[data-watermark="editorial"],
   .story-root .story-stage-sculpture[data-watermark="editorial"]{display:none!important}
 }
+
+
+/* A concise, visible personal introduction beneath the opening statement. */
+.story-root .story-hero-intro{max-width:490px;margin-top:20px;padding-left:17px;border-left:3px solid var(--story-red);font:400 15px/1.65 Arial,Helvetica,sans-serif;color:#c9c3ba}
+.story-root .story-hero-intro strong{font-weight:700;color:var(--story-paper)}
+@media(max-width:650px){.story-root .story-hero-intro{font-size:14px;line-height:1.6;margin-top:17px;max-width:440px}}
